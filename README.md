@@ -12,12 +12,16 @@ Here is a listing of the dependencies of `hm`:
 
 |Package|Used For|Vitality|Notes|Licence|
 |-------|--------|--------|-----|-------|
-|[errors](https://github.com/pkg/errors)|Error wrapping|Gorgonia won't die without it.|Stable API for the past 6 months|[errors licence](https://github.com/pkg/errors/blob/master/LICENSE) (MIT/BSD-like)|
+|[errors](https://github.com/pkg/errors)|Error wrapping|Can do without, but this is by far the superior error solution out there|Stable API for the past 6 months|[errors licence](https://github.com/pkg/errors/blob/master/LICENSE) (MIT/BSD-like)|
 |[testify/assert](https://github.com/stretchr/testify)|Testing|Can do without but will be a massive pain in the ass to test||[testify licence](https://github.com/stretchr/testify/blob/master/LICENSE) (MIT/BSD-like)|
 
 # Usage
 
 TODO: Write this
+
+# Notes
+
+This package is used by [Gorgonia](https://github.com/chewxy/gorgonia) as part of the graph building process. It is also used by several other internal projects of this author, all sharing a similar theme of requiring a type system, which is why this was abstracted out.
 
 
 # Contributing
