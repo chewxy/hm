@@ -1,4 +1,4 @@
-# hm [![Build Status](https://travis-ci.org/chewxy/hm.svg?branch=master)](https://travis-ci.org/chewxy/hm)
+# hm [![GoDoc](https://godoc.org/github.com/chewxy/hm?status.svg)](https://godoc.org/github.com/chewxy/hm) [![Build Status](https://travis-ci.org/chewxy/hm.svg?branch=master)](https://travis-ci.org/chewxy/hm)
 
 Package hm is a simple Hindley-Milner type inference system in Go. It provides the necessary data structures and functions for creating such a system. 
 

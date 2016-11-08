@@ -1,19 +1,11 @@
-sudo: required
-
 language: go
-
-branches:
-  only:
-    - master
+go_import_path: github.com/chewxy/hm
 go:
+  - 1.4.3
+  - 1.5.4
   - 1.6.3
-  - 1.7.1
+  - 1.7.3
   - tip
-
-env:
-  global:
-    - GOARCH=amd64
-    - TRAVISTEST=true
 
 script:
   - go test -v ./...
