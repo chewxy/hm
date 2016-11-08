@@ -69,13 +69,18 @@ func (set TypeClassSet) IsSupersetOf(other TypeClassSet) bool {
 
 // Intersect performs an intersection between two sets - only items that exist in both are returned
 func (set TypeClassSet) Intersect(other TypeClassSet) TypeClassSet {
-	retVal := make(TypeClassSet, 0)
-	for _, o := range other {
-		if set.Contains(o) {
-			retVal = append(retVal, o)
+	switch {
+	case len(set) == 0 || len(other) == 0:
+		return nil
+	default:
+		retVal := make(TypeClassSet, 0)
+		for _, o := range other {
+			if set.Contains(o) {
+				retVal = append(retVal, o)
+			}
 		}
+		return retVal
 	}
-	return retVal
 }
 
 //Union joins both sets together, keeping only unique items
@@ -101,8 +106,7 @@ func (set TypeClassSet) Union(other TypeClassSet) TypeClassSet {
 
 // Difference returns a new set with items in the current set but not in the other set.
 // Equivalent to  (set - other)
-func (set TypeClassSet) Difference(other TypeClassSet) TypeClassSet {
-	retVal := make(TypeClassSet, 0)
+func (set TypeClassSet) Difference(other TypeClassSet) (retVal TypeClassSet) {
 	for _, v := range set {
 		if !other.Contains(v) {
 			retVal = append(retVal, v)

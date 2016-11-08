@@ -69,31 +69,44 @@ func (set Types) IsSupersetOf(other Types) bool {
 
 // Intersect performs an intersection between two sets - only items that exist in both are returned
 func (set Types) Intersect(other Types) Types {
-	retVal := make(Types, 0)
-	for _, o := range other {
-		if set.Contains(o) {
-			retVal = append(retVal, o)
+	switch {
+	case len(set) == 0 || len(other) == 0:
+		return nil
+	default:
+		retVal := make(Types, 0)
+		for _, o := range other {
+			if set.Contains(o) {
+				retVal = append(retVal, o)
+			}
 		}
+		return retVal
 	}
-	return retVal
 }
 
 //Union joins both sets together, keeping only unique items
 func (set Types) Union(other Types) Types {
-	retVal := make(Types, len(set))
-	copy(retVal, set)
-	for _, o := range other {
-		if !retVal.Contains(o) {
-			retVal = append(retVal, o)
+	switch {
+	case len(set) == 0 && len(other) == 0:
+		return nil
+	case len(set) == 0 && len(other) > 0:
+		return other
+	case len(set) > 0 && len(other) == 0:
+		return set
+	default:
+		retVal := make(Types, len(set))
+		copy(retVal, set)
+		for _, o := range other {
+			if !retVal.Contains(o) {
+				retVal = append(retVal, o)
+			}
 		}
+		return retVal
 	}
-	return retVal
 }
 
 // Difference returns a new set with items in the current set but not in the other set.
 // Equivalent to  (set - other)
-func (set Types) Difference(other Types) Types {
-	retVal := make(Types, 0)
+func (set Types) Difference(other Types) (retVal Types) {
 	for _, v := range set {
 		if !other.Contains(v) {
 			retVal = append(retVal, v)
