@@ -3,29 +3,42 @@ package hm
 import "fmt"
 
 // atom is a mock atomic type
-type atom byte
+type particle byte
 
 const (
-	nathaniel atom = iota
-	adam
-	jonathan
-	osterman
+	proton particle = iota
+	electron
+	neutron
+	photon
 )
 
-func (t atom) Contains(tv TypeVariable) bool { return false }
-func (t atom) Eq(other Type) bool {
-	if ta, ok := other.(atom); ok {
+func (t particle) Contains(tv TypeVariable) bool { return false }
+func (t particle) Eq(other Type) bool {
+	if ta, ok := other.(particle); ok {
 		return ta == t
 	}
 	return false
 }
 
-func (t atom) Name() string                   { return t.String() }
-func (t atom) Format(state fmt.State, c rune) { fmt.Fprintf(state, "atom(%d)", byte(t)) }
-func (t atom) String() string                 { return fmt.Sprintf("atom(%d)", byte(t)) }
-func (t atom) Types() Types                   { return nil }
-func (t atom) SetTypes(...Type) TypeOp        { return t }
-func (t atom) IsAtom() bool                   { return true }
+func (t particle) Name() string                   { return t.String() }
+func (t particle) Format(state fmt.State, c rune) { fmt.Fprintf(state, t.String()) }
+func (t particle) Types() Types                   { return nil }
+func (t particle) SetTypes(...Type) TypeOp        { return t }
+func (t particle) IsAtom() bool                   { return true }
+func (t particle) String() string {
+	switch t {
+	case proton:
+		return "proton"
+	case electron:
+		return "electron"
+	case neutron:
+		return "neutron"
+	case photon:
+		return "photon"
+	default:
+		return fmt.Sprintf("atom(%d)", byte(t))
+	}
+}
 
 // list is a mock type op. Think of it as `List a`
 type list struct {

@@ -10,17 +10,18 @@ import (
 func TestFnBasics(t *testing.T) {
 	var t0 *FunctionType
 
-	// nathaniel → adam
-	t0 = NewFnType(nathaniel, adam)
+	// proton → electron
+	name := "proton → electron"
+	t0 = NewFnType(proton, electron)
 	if t0.Name() != "→" {
 		t.Error("Expected the name of a FunctionType to be \"→\"")
 	}
 
-	if fmt.Sprintf("%v", t0) != "atom(0) → atom(1)" {
+	if fmt.Sprintf("%v", t0) != name {
 		t.Errorf("Basic Format error. Got %q", fmt.Sprintf("%v", t0))
 	}
 
-	if t0.String() != "atom(0) → atom(1)" {
+	if t0.String() != name {
 		t.Errorf("Basic String error: Got %q", t0.String())
 	}
 
@@ -28,8 +29,8 @@ func TestFnBasics(t *testing.T) {
 		t.Error("A Function Type that has no type variables shouldn't contain type variables")
 	}
 
-	// a → b → adam
-	t0 = NewFnType(NewTypeVar("a"), NewTypeVar("b"), adam)
+	// a → b → electron
+	t0 = NewFnType(NewTypeVar("a"), NewTypeVar("b"), electron)
 	if !t0.Contains(NewTypeVar("a")) {
 		t.Errorf("Expected %v to contain Type Var `a`", t0)
 	}
@@ -44,7 +45,7 @@ func TestFnBasics(t *testing.T) {
 
 	correct := Types{
 		NewTypeVar("a"),
-		NewFnType(NewTypeVar("b"), adam),
+		NewFnType(NewTypeVar("b"), electron),
 	}
 	assert.EqualValues(t, correct, t0.Types())
 
@@ -57,26 +58,26 @@ func TestFnBasics(t *testing.T) {
 		t.Error("Expected them to be the same")
 	}
 
-	t1.ts[1] = adam
+	t1.ts[1] = electron
 	if t0.Eq(t1) {
 		t.Error("%v should not be equal to %v", t0, t1)
 	}
 
 	// set type
 	var top TypeOp
-	top = t0.SetTypes(nathaniel, adam)
+	top = t0.SetTypes(proton, electron)
 	if t0 != top.(*FunctionType) {
 		t.Error("The return pointers should be the same")
 	}
 
 	// bad shit
 	f := func() {
-		t0.SetTypes(nathaniel, adam, jonathan, osterman)
+		t0.SetTypes(proton, electron, neutron, photon)
 	}
 	assert.Panics(t, f)
 
 	f = func() {
-		NewFnType(nathaniel)
+		NewFnType(proton)
 	}
 	assert.Panics(t, f)
 }

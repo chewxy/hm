@@ -19,7 +19,7 @@ func TestPrune(t *testing.T) {
 	assert.Equal(tv0, pruned)
 
 	t.Log("Type Var with instance")
-	t0 = nathaniel
+	t0 = proton
 	tv0 = NewTypeVar("a", WithInstance(t0))
 	pruned = Prune(tv0)
 	assert.Equal(t0, pruned)
@@ -38,16 +38,16 @@ var unifyTests = []struct {
 	{"empty ~ a", TypeVariable{}, NewTypeVar("a"), nil, nil, true},
 	{"a ~ a (recursive unification)", NewTypeVar("a"), NewTypeVar("a"), nil, nil, true},
 	{"a ~ b", NewTypeVar("a"), NewTypeVar("b"), NewTypeVar("a", WithInstance(NewTypeVar("b"))), NewTypeVar("b"), false},
-	{"a ~ nathaniel", NewTypeVar("a"), nathaniel, NewTypeVar("a", WithInstance(nathaniel)), nathaniel, false},
-	{"nathaniel ~ a", nathaniel, NewTypeVar("a"), nathaniel, NewTypeVar("a", WithInstance(nathaniel)), false},
+	{"a ~ proton", NewTypeVar("a"), proton, NewTypeVar("a", WithInstance(proton)), proton, false},
+	{"proton ~ a", proton, NewTypeVar("a"), proton, NewTypeVar("a", WithInstance(proton)), false},
 
 	// type op ~ type op
-	{"nathaniel ~ nathaniel", nathaniel, nathaniel, nathaniel, nathaniel, false},
-	{"List a ~ List nathaniel", list{NewTypeVar("a")}, list{nathaniel}, list{nathaniel}, list{nathaniel}, false},
-	{"List a ~ GoateeList nathaniel", list{NewTypeVar("a")}, mirrorUniverseList{list{nathaniel}}, nil, nil, true},
+	{"proton ~ proton", proton, proton, proton, proton, false},
+	{"List a ~ List proton", list{NewTypeVar("a")}, list{proton}, list{proton}, list{proton}, false},
+	{"List a ~ GoateeList proton", list{NewTypeVar("a")}, mirrorUniverseList{list{proton}}, nil, nil, true},
 
 	{"malformed ~ a", malformed{}, NewTypeVar("a"), nil, nil, true},
-	{"nathaniel ~ malformed{}", nathaniel, malformed{}, nil, nil, true},
+	{"proton ~ malformed{}", proton, malformed{}, nil, nil, true},
 
 	// unsure of what the correct answer should be...
 	// {"a ~ malformed", NewTypeVar("a"), malformed{}, nil, nil, true},

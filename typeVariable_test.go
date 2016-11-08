@@ -17,10 +17,10 @@ var tvEq = []struct {
 	{"empty == empty", TypeVariable{}, TypeVariable{}, true},
 	{"a == a", NewTypeVar("a"), NewTypeVar("a"), true},
 	{"a == b", NewTypeVar("a"), NewTypeVar("b"), false},
-	{"a == nathaniel", NewTypeVar("a"), nathaniel, false},
-	{"a:nathaniel == nathaniel", NewTypeVar("a", WithInstance(nathaniel)), nathaniel, false},
-	{"a:nathaniel == a:nathaniel", NewTypeVar("a", WithInstance(nathaniel)), NewTypeVar("a", WithInstance(nathaniel)), true},
-	{"a:nathaniel == b:nathaniel", NewTypeVar("a", WithInstance(nathaniel)), NewTypeVar("b", WithInstance(nathaniel)), false},
+	{"a == proton", NewTypeVar("a"), proton, false},
+	{"a:proton == proton", NewTypeVar("a", WithInstance(proton)), proton, false},
+	{"a:proton == a:proton", NewTypeVar("a", WithInstance(proton)), NewTypeVar("a", WithInstance(proton)), true},
+	{"a:proton == b:proton", NewTypeVar("a", WithInstance(proton)), NewTypeVar("b", WithInstance(proton)), false},
 	{"a:b:<nil> == a:b:<nil>", NewTypeVar("a", WithInstance(NewTypeVar("b"))), NewTypeVar("a", WithInstance(NewTypeVar("b"))), true},
 }
 
@@ -33,8 +33,8 @@ var tvContains = []struct {
 	{"empty <: empty", TypeVariable{}, TypeVariable{}, true},
 	{"empty <: a", TypeVariable{}, NewTypeVar("a"), false},
 	{"a <: a", NewTypeVar("a"), NewTypeVar("a"), true},
-	{"a:nathaniel <: a:nathaniel", NewTypeVar("a", WithInstance(nathaniel)), NewTypeVar("a", WithInstance(nathaniel)), true},
-	{"a <: a:nathaniel", NewTypeVar("a"), NewTypeVar("a", WithInstance(nathaniel)), false},
+	{"a:proton <: a:proton", NewTypeVar("a", WithInstance(proton)), NewTypeVar("a", WithInstance(proton)), true},
+	{"a <: a:proton", NewTypeVar("a"), NewTypeVar("a", WithInstance(proton)), false},
 }
 
 var tvStrings = []struct {
@@ -45,8 +45,8 @@ var tvStrings = []struct {
 }{
 	{"empty", TypeVariable{}, "''", "'':<nil>"},
 	{"a", NewTypeVar("a"), "a", "a:<nil>"},
-	{"a:nathaniel", NewTypeVar("a", WithInstance(nathaniel)), "atom(0)", "a:atom(0)"},
-	{"a:b:nathaniel", NewTypeVar("a", WithInstance(NewTypeVar("b", WithInstance(nathaniel)))), "atom(0)", "a:b:atom(0)"},
+	{"a:proton", NewTypeVar("a", WithInstance(proton)), "proton", "a:proton"},
+	{"a:b:proton", NewTypeVar("a", WithInstance(NewTypeVar("b", WithInstance(proton)))), "proton", "a:b:proton"},
 }
 
 func TestTypeVariableBasics(t *testing.T) {
@@ -70,7 +70,7 @@ func TestTypeVariableBasics(t *testing.T) {
 	}
 
 	t.Log("Equality - same name but different instances: Panic expected")
-	t1 = adam
+	t1 = electron
 	tv0 = NewTypeVar("a", WithInstance(t0))
 	tv1 = NewTypeVar("a", WithInstance(t1))
 	fail := func() {
