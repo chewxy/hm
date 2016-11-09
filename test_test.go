@@ -7,9 +7,13 @@ type particle byte
 
 const (
 	proton particle = iota
-	electron
 	neutron
+
+	electron
+	muon
+
 	photon
+	higgs
 )
 
 func (t particle) Contains(tv TypeVariable) bool { return false }
@@ -31,10 +35,14 @@ func (t particle) String() string {
 		return "proton"
 	case electron:
 		return "electron"
+	case muon:
+		return "muon"
 	case neutron:
 		return "neutron"
 	case photon:
 		return "photon"
+	case higgs:
+		return "higgs"
 	default:
 		return fmt.Sprintf("atom(%d)", byte(t))
 	}

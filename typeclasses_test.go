@@ -27,6 +27,7 @@ func TestTypeClassSet(t *testing.T) {
 	set := NewTypeClassSet()
 	set2 := NewTypeClassSet(typeclasses2...)
 	assert.Equal(0, len(set), "Expected empty set")
+	assert.Equal(2, len(set2), "Expected a set with 2 elements")
 
 	// add
 	for _, tc := range typeclasses1 {
