@@ -5,16 +5,22 @@ import "github.com/pkg/errors"
 // Unify unifies the two types.
 // These are the rules:
 //
-// type constants (atomic types) have no substitution
+// Type Constants and Type Constants
+//
+// Type constants (atomic types) have no substitution
 //		c ~ c : []
 //
-// type variables have no substitutions if there are no instances
+// Type Variables and Type Variables
+//
+// Type variables have no substitutions if there are no instances:
 // 		a ~ a : []
 //
+// Default Unification
+//
 // if type variable 'a' is not in 'T', then unification is simple: replace all instances of 'a' with 'T'
-// 		a ∉ T
-//		----------
-//		a ~ T : [a/T]
+// 		     a ∉ T
+//		---------------
+//		 a ~ T : [a/T]
 //
 // The more complicated constructor unification and arrow unification isn't quite covered yet.
 func Unify(t1, t2 Type) (retVal1, retVal2 Type, err error) {
