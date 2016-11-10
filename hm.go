@@ -2,85 +2,125 @@ package hm
 
 import "github.com/pkg/errors"
 
+const digits = "0123456789"
+
 type Env interface {
+	// TypeOf returns the type of the identifier
 	TypeOf(id string) (Type, error)
+
+	// Add adds the identifier and type
 	Add(id string, t Type) Env
 
+	// AddSpecified adds a TypeVariable to the set of specified type variables
+	AddConcreteVar(tv TypeVariable) Env
+
+	// Specified is a set of TypeVariables that have been specified
+	ConcreteVars() Types
+
+	// Clone clones the Env
 	Clone() Env
 }
 
-type SimpleEnv map[string]Type
+type SimpleEnvConsOpt func(*SimpleEnv)
 
-func (env SimpleEnv) TypeOf(id string) (Type, error) {
-	if t, ok := env[id]; ok {
-		return t, nil
+func WithDict(m map[string]Type) SimpleEnvConsOpt {
+	f := func(env *SimpleEnv) {
+		env.m = m
 	}
+	return f
+}
+
+type SimpleEnv struct {
+	m map[string]Type
+	s Types
+}
+
+func NewSimpleEnv(opts ...SimpleEnvConsOpt) *SimpleEnv {
+	env := &SimpleEnv{
+		m: make(map[string]Type),
+	}
+
+	for _, opt := range opts {
+		opt(env)
+	}
+
+	return env
+}
+
+func (env *SimpleEnv) TypeOf(id string) (Type, error) {
+	if t, ok := env.m[id]; ok {
+		return env.Fresh(t), nil
+	}
+
 	return nil, errors.Errorf("Identifier %q not defined", id)
 }
 
-func (env SimpleEnv) Add(id string, t Type) Env { env[id] = t; return env }
-func (env SimpleEnv) Clone() Env {
-	retVal := make(SimpleEnv)
-	for k, v := range env {
-		env[k] = v
+func (env *SimpleEnv) Add(id string, t Type) Env {
+	env.m[id] = t
+	return env
+}
+
+func (env *SimpleEnv) AddConcreteVar(tv TypeVariable) Env {
+	env.s = env.s.Add(tv)
+	return env
+}
+
+func (env *SimpleEnv) ConcreteVars() Types {
+	return env.s
+}
+
+func (env *SimpleEnv) Clone() Env {
+	m := make(map[string]Type)
+	for k, v := range env.m {
+		m[k] = v
 	}
+
+	s := make(Types, len(env.s))
+	copy(s, env.s)
+
+	return &SimpleEnv{
+		m: m,
+		s: s,
+	}
+}
+
+func (env *SimpleEnv) Fresh(t Type) Type {
+	// since TypeVariable cannot be a map key, we'll not use a map and use two slices to keep track of mapping instead
+	var k, v Types
+	retVal, _, _ := env.fresh(t, k, v)
 	return retVal
 }
 
-// Expr represents an expression.
-type Node interface {
-	Children() []Node
-}
+// recursively creates a fresh type
+func (env *SimpleEnv) fresh(t Type, k, v Types) (freshType Type, keys Types, values Types) {
+	switch p := Prune(t).(type) {
+	case TypeVariable:
+		if env.s.Contains(p) {
+			return p, k, v
+		}
 
-type UntypedNode interface {
-	// ???
-}
+		var i int
+		if i = k.Index(p); i > -1 {
+			return v[i], k, v
+		}
 
-// Typer is any type that can report its own Type
-type Typer interface {
-	Type() Type
-}
-
-// Value is a node that represents a value
-type Value interface {
-	Node
-	Typer
-}
-
-// Ident is a node that represents an identifier
-type Ident interface {
-	Node
-	Name() string
-}
-
-// Var is a node that represents `var x int`
-type Var interface {
-	Node
-	Typer
-	Name() string
-}
-
-// Lambda is a node that represents a function definition
-type Lambda interface {
-	Node
-	Arg() Node
-	Body() Node
-}
-
-// Apply is a node that represents a function call/application
-type Apply interface {
-	Node
-	Typer
-	ArgTypes() Types
-}
-
-type Let interface {
-	Node
-}
-
-type LetRec interface {
-	Let
-	IsLetRec() bool
+		tv := NewTypeVar(randomStr(5))
+		k = append(k, p)
+		v = append(v, tv)
+		return tv, k, v
+	case TypeConst:
+		return p.Clone(), k, v
+	case TypeOp:
+		ts := make(Types, len(p.Types()))
+		for i, tt := range ts {
+			ts[i], k, v = env.fresh(tt, k, v)
+		}
+		top := p.Clone()
+		top = top.SetTypes(ts...)
+		return top, k, v
+	default:
+		panic("Not implemented yet")
+	}
 }
 
 // The Infer function is the core of the HM type inference system. This is a reference implementation and is completely servicable, but not quite performant.
@@ -137,7 +177,7 @@ type LetRec interface {
 func Infer(node Node, env Env) (retVal Type, err error) {
 	var ok bool
 	switch n := node.(type) {
-	case Ident:
+	case Lit:
 		// if the node knows its own type...
 		var typer Typer
 		if typer, ok = n.(Typer); ok {
@@ -145,12 +185,75 @@ func Infer(node Node, env Env) (retVal Type, err error) {
 		}
 
 		return env.TypeOf(n.Name())
+	case Var:
+		if retVal, err = env.TypeOf(n.Name()); err != nil {
+			// add to env
+			env.Add(n.Name(), n.Type())
+			return n.Type(), nil
+		}
+		return
 	case Lambda:
+		argType := NewTypeVar(randomStr(5))
+		scope := env.Clone()
+		scope = scope.Add(n.Name(), argType)
+		scope = scope.AddConcreteVar(argType)
+
+		if retVal, err = Infer(n.Body(), scope); err != nil {
+			return
+		}
+		retVal = NewFnType(argType, retVal)
+		return
 	case Apply:
+		var fnType Type
+		if fnType, err = Infer(n.Fn(), env); err != nil {
+			return
+		}
+
+		var arg Type
+		if arg, err = Infer(n.Body(), env); err != nil {
+			return
+		}
+		retType := NewTypeVar(randomStr(5))
+
+		fn := NewFnType(arg, retType)
+		var t0 Type
+		if t0, _, err = Unify(fn, fnType); err != nil {
+			return
+		}
+
+		fn = t0.(*FunctionType)
+		retVal = fn.ReturnType()
 	case LetRec:
+		var tmp Type
+		tmp = NewTypeVar(randomStr(5))
+		scope := env.Clone()
+		scope = scope.Add(n.Name(), tmp)
+		scope = scope.AddConcreteVar(tmp.(TypeVariable))
+
+		var def Type
+		if def, err = Infer(n.Def(), scope); err != nil {
+			return
+		}
+
+		if tmp, _, err = Unify(tmp, def); err != nil {
+			return
+		}
+
+		scope = scope.Add(n.Name(), tmp)
+		return Infer(n.Body(), scope)
+
 	case Let:
+		var def Type
+		if def, err = Infer(n.Def(), env); err != nil {
+			return
+		}
+
+		scope := env.Clone()
+		scope = scope.Add(n.Name(), def)
+
+		return Infer(n.Body(), scope)
 	case UntypedNode:
 
 	}
-	return nil
+	return
 }

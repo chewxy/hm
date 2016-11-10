@@ -174,3 +174,19 @@ func (set Types) Format(state fmt.State, c rune) {
 	}
 	state.Write([]byte("]"))
 }
+
+// Clone
+func (set Types) Clone() Types {
+	retVal := make(Types, len(set))
+	copy(retVal, set)
+	return retVal
+}
+
+func (set Types) Index(w Type) int {
+	for i, v := range set {
+		if v.Eq(w) {
+			return i
+		}
+	}
+	return -1
+}

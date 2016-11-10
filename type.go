@@ -19,7 +19,9 @@ type Type interface {
 type TypeOp interface {
 	Type
 	Types() Types
+
 	SetTypes(...Type) TypeOp
+	Clone() TypeOp
 }
 
 // TypeConst is a constant type. SetTypes(...) will yield the same exact values. It's useful for implementing atomic types. Formerly called Atomic

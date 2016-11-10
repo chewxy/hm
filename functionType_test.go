@@ -7,6 +7,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var fnCloneTests []*FunctionType
+
+func init() {
+	fnCloneTests = []*FunctionType{
+		NewFnType(electron, list{photon}),
+		NewFnType(list{photon}, electron),
+		NewFnType(electron, NewTypeVar("a")),
+		NewFnType(NewTypeVar("a"), electron),
+	}
+}
+
 func TestFnBasics(t *testing.T) {
 	var t0 *FunctionType
 
@@ -80,4 +91,38 @@ func TestFnBasics(t *testing.T) {
 		NewFnType(proton)
 	}
 	assert.Panics(t, f)
+}
+
+func TestFnTypeSpecials(t *testing.T) {
+	assert := assert.New(t)
+	var t0 *FunctionType
+
+	// electron anti-excitation example
+	// (the slightly more correct representation is `electron → (electron, photon)`
+	// given you know, the electron has simply moved to a lower state of energy)
+
+	// electron → photon
+	t0 = NewFnType(electron, photon)
+	assert.Equal(Types{electron, photon}, t0.TypesRec())
+	assert.Equal(photon, t0.ReturnType())
+
+	// annihilation time!
+	// annihilation :: positron → electron → photon → (quark, antiquark, gluon)
+	// but for the purpose of this test we won't have antiquarks, gluons and tuple that represents them
+
+	// positron → electron → photon → quark
+	t0 = NewFnType(positron, electron, photon, quark)
+	assert.Equal(Types{positron, electron, photon, quark}, t0.TypesRec())
+	assert.Equal(quark, t0.ReturnType())
+}
+
+func TestFnTypeClone(t *testing.T) {
+	assert := assert.New(t)
+	for _, ft := range fnCloneTests {
+		if ft == ft.Clone() {
+			t.Error("Cloning of *FunctionType should not yield the same pointer")
+			continue
+		}
+		assert.Equal(ft, ft.Clone())
+	}
 }

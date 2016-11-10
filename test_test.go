@@ -2,14 +2,15 @@ package hm
 
 import "fmt"
 
-// atom is a mock atomic type
 type particle byte
 
 const (
 	proton particle = iota
 	neutron
+	quark
 
 	electron
+	positron
 	muon
 
 	photon
@@ -27,18 +28,23 @@ func (t particle) Eq(other Type) bool {
 func (t particle) Name() string                   { return t.String() }
 func (t particle) Format(state fmt.State, c rune) { fmt.Fprintf(state, t.String()) }
 func (t particle) Types() Types                   { return nil }
+func (t particle) Clone() TypeOp                  { return t }
 func (t particle) SetTypes(...Type) TypeOp        { return t }
-func (t particle) IsAtom() bool                   { return true }
+func (t particle) IsConstant() bool               { return true }
 func (t particle) String() string {
 	switch t {
 	case proton:
 		return "proton"
-	case electron:
-		return "electron"
-	case muon:
-		return "muon"
 	case neutron:
 		return "neutron"
+	case quark:
+		return "quark"
+	case electron:
+		return "electron"
+	case positron:
+		return "positron"
+	case muon:
+		return "muon"
 	case photon:
 		return "photon"
 	case higgs:
@@ -74,6 +80,16 @@ func (t list) Format(state fmt.State, c rune) { fmt.Fprintf(state, "List %v", t.
 func (t list) String() string                 { return fmt.Sprintf("List %v", t.t) }
 func (t list) Types() Types                   { return Types{t.t} }
 func (t list) SetTypes(ts ...Type) TypeOp     { return list{ts[0]} }
+func (t list) Clone() TypeOp {
+	retVal := list{}
+	switch tt := t.t.(type) {
+	case TypeVariable:
+		retVal.t = tt
+	case TypeOp:
+		retVal.t = tt.Clone()
+	}
+	return retVal
+}
 
 // mirrorUniverseList is a List with a different name
 type mirrorUniverseList struct {
