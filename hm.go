@@ -2,8 +2,6 @@ package hm
 
 import "github.com/pkg/errors"
 
-const digits = "0123456789"
-
 type Env interface {
 	// TypeOf returns the type of the identifier
 	TypeOf(id string) (Type, error)
@@ -26,6 +24,13 @@ type SimpleEnvConsOpt func(*SimpleEnv)
 func WithDict(m map[string]Type) SimpleEnvConsOpt {
 	f := func(env *SimpleEnv) {
 		env.m = m
+	}
+	return f
+}
+
+func WithConcreteVars(s Types) SimpleEnvConsOpt {
+	f := func(env *SimpleEnv) {
+		env.s = env.s.Union(s)
 	}
 	return f
 }
@@ -111,8 +116,9 @@ func (env *SimpleEnv) fresh(t Type, k, v Types) (freshType Type, keys Types, val
 	case TypeConst:
 		return p.Clone(), k, v
 	case TypeOp:
-		ts := make(Types, len(p.Types()))
-		for i, tt := range ts {
+		pts := p.Types()
+		ts := make(Types, len(pts))
+		for i, tt := range pts {
 			ts[i], k, v = env.fresh(tt, k, v)
 		}
 		top := p.Clone()
@@ -176,14 +182,18 @@ func (env *SimpleEnv) fresh(t Type, k, v Types) (freshType Type, keys Types, val
 //		   Γ ⊢ e: ∀ α.T1
 func Infer(node Node, env Env) (retVal Type, err error) {
 	var ok bool
+
+	// if the node knows its own type...
+	var typer Typer
+	if typer, ok = node.(Typer); ok {
+		// and if the type isn't nil...
+		if retVal = typer.Type(); retVal != nil {
+			return
+		}
+	}
+
 	switch n := node.(type) {
 	case Lit:
-		// if the node knows its own type...
-		var typer Typer
-		if typer, ok = n.(Typer); ok {
-			return typer.Type(), nil
-		}
-
 		return env.TypeOf(n.Name())
 	case Var:
 		if retVal, err = env.TypeOf(n.Name()); err != nil {

@@ -18,9 +18,10 @@ type Typer interface {
 	Type() Type
 }
 
-// Value is a node that represents a value
-type Value interface {
+// Var is a node that represents `var x int`
+type Var interface {
 	Node
+	Namer
 	Typer
 }
 
@@ -30,11 +31,10 @@ type Lit interface {
 	IsLit() bool
 }
 
-// Var is a node that represents `var x int`
-type Var interface {
-	Node
-	Namer
-	Typer
+// Value is a node that represents a value
+type Value interface {
+	Lit
+	IsValue() bool
 }
 
 // Lambda is a node that represents a function definition
