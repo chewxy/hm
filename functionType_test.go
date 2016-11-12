@@ -75,19 +75,19 @@ func TestFnBasics(t *testing.T) {
 	}
 
 	// set type
-	var top TypeOp
-	top = t0.SetTypes(proton, electron)
-	if t0 != top.(*FunctionType) {
-		t.Error("The return pointers should be the same")
-	}
+	// var top TypeOp
+	// top = t0.SetTypes(proton, electron)
+	// if t0 != top.(*FunctionType) {
+	// 	t.Error("The return pointers should be the same")
+	// }
 
 	// bad shit
-	f := func() {
-		t0.SetTypes(proton, electron, neutron, photon)
-	}
-	assert.Panics(t, f)
+	// f := func() {
+	// 	t0.SetTypes(proton, electron, neutron, photon)
+	// }
+	// assert.Panics(t, f)
 
-	f = func() {
+	f := func() {
 		NewFnType(proton)
 	}
 	assert.Panics(t, f)

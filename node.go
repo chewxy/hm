@@ -40,6 +40,8 @@ type Value interface {
 // Lambda is a node that represents a function definition
 type Lambda interface {
 	Node
+
+	// the Name() that should be returned is the name of the first arg of the function
 	Namer
 	IsLambda() bool
 }

@@ -92,9 +92,9 @@ func (t prim) String() string {
 }
 
 // implement TypeOp
-func (t prim) Types() Types            { return nil }
-func (t prim) SetTypes(...Type) TypeOp { return t }
-func (t prim) Clone() TypeOp           { return t }
+func (t prim) Types() Types                      { return nil }
+func (t prim) Replace(TypeVariable, Type) TypeOp { return t }
+func (t prim) Clone() TypeOp                     { return t }
 
 func (t prim) IsConst() bool { return true }
 

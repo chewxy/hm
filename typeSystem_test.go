@@ -34,20 +34,20 @@ var unifyTests = []struct {
 	retB Type
 	e    bool // does it error?
 }{
-	{"a ~ empty", NewTypeVar("a"), TypeVariable{}, NewTypeVar("a"), TypeVariable{}, false},
-	{"empty ~ a", TypeVariable{}, NewTypeVar("a"), nil, nil, true},
-	{"a ~ a (recursive unification)", NewTypeVar("a"), NewTypeVar("a"), nil, nil, true},
-	{"a ~ b", NewTypeVar("a"), NewTypeVar("b"), NewTypeVar("a", WithInstance(NewTypeVar("b"))), NewTypeVar("b"), false},
-	{"a ~ proton", NewTypeVar("a"), proton, NewTypeVar("a", WithInstance(proton)), proton, false},
-	{"proton ~ a", proton, NewTypeVar("a"), proton, NewTypeVar("a", WithInstance(proton)), false},
+	// {"a ~ empty", NewTypeVar("a"), TypeVariable{}, NewTypeVar("a"), TypeVariable{}, false},
+	// {"empty ~ a", TypeVariable{}, NewTypeVar("a"), nil, nil, true},
+	// {"a ~ a (recursive unification)", NewTypeVar("a"), NewTypeVar("a"), nil, nil, true},
+	// {"a ~ b", NewTypeVar("a"), NewTypeVar("b"), NewTypeVar("a", WithInstance(NewTypeVar("b"))), NewTypeVar("b"), false},
+	// {"a ~ proton", NewTypeVar("a"), proton, NewTypeVar("a", WithInstance(proton)), proton, false},
+	// {"proton ~ a", proton, NewTypeVar("a"), proton, NewTypeVar("a", WithInstance(proton)), false},
 
 	// type op ~ type op
-	{"proton ~ proton", proton, proton, proton, proton, false},
+	// {"proton ~ proton", proton, proton, proton, proton, false},
 	{"List a ~ List proton", list{NewTypeVar("a")}, list{proton}, list{proton}, list{proton}, false},
-	{"List a ~ GoateeList proton", list{NewTypeVar("a")}, mirrorUniverseList{list{proton}}, nil, nil, true},
+	// {"List a ~ GoateeList proton", list{NewTypeVar("a")}, mirrorUniverseList{list{proton}}, nil, nil, true},
 
-	{"malformed ~ a", malformed{}, NewTypeVar("a"), nil, nil, true},
-	{"proton ~ malformed{}", proton, malformed{}, nil, nil, true},
+	// {"malformed ~ a", malformed{}, NewTypeVar("a"), nil, nil, true},
+	// {"proton ~ malformed{}", proton, malformed{}, nil, nil, true},
 
 	// unsure of what the correct answer should be...
 	// {"a ~ malformed", NewTypeVar("a"), malformed{}, nil, nil, true},

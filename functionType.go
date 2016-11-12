@@ -60,13 +60,30 @@ func (t *FunctionType) String() string { return fmt.Sprintf("%v", t) }
 
 func (t *FunctionType) Types() Types { return Types(t.ts[:]) }
 
-func (t *FunctionType) SetTypes(ts ...Type) TypeOp {
-	if len(ts) != 2 {
-		panic(fmt.Sprintf(typeOpArity, len(ts), ts))
+func (t *FunctionType) Replace(tv TypeVariable, with Type) TypeOp {
+	switch tt := t.ts[0].(type) {
+	case TypeVariable:
+		t.ts[0] = with
+	case TypeConst:
+		// do nothing
+	case TypeOp:
+		tt = tt.Replace(tv, with)
+		t.ts[0] = tt
+	default:
+		panic("WTF?")
 	}
 
-	t.ts[0] = ts[0]
-	t.ts[1] = ts[1]
+	switch tt := t.ts[1].(type) {
+	case TypeVariable:
+		t.ts[1] = with
+	case TypeConst:
+		// do nothing
+	case TypeOp:
+		t.ts[1] = tt.Replace(tv, with)
+	default:
+		panic("WTF?")
+	}
+
 	return t
 }
 

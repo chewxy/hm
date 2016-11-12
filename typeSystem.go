@@ -24,6 +24,9 @@ import "github.com/pkg/errors"
 //
 // The more complicated constructor unification and arrow unification isn't quite covered yet.
 func Unify(t1, t2 Type) (retVal1, retVal2 Type, err error) {
+	enterLoggingContext()
+	defer leaveLoggingContext()
+
 	a := Prune(t1)
 	b := Prune(t2)
 
@@ -44,18 +47,29 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, err error) {
 			}
 
 			var t_a, t_b Type
-			var i int
-			for i, t_a = range atypes {
-				if t_a, t_b, err = Unify(t_a, btypes[i]); err != nil {
+			for i := 0; i < len(atypes); i++ {
+				t_a = atypes[i]
+				t_b = btypes[i]
+
+				var t_a2, t_b2 Type
+				if t_a2, t_b2, err = Unify(t_a, t_b); err != nil {
 					return
 				}
 
-				atypes[i] = Prune(t_a)
-				btypes[i] = Prune(t_b)
+				if tv, ok := t_a.(TypeVariable); ok {
+					at = at.Replace(tv, Prune(t_a2))
+				}
+
+				if tv, ok := t_b.(TypeVariable); ok {
+					bt = bt.Replace(tv, Prune(t_b2))
+				}
+
+				atypes = at.Types()
+				btypes = bt.Types()
 			}
 
-			retVal1 = at.SetTypes(atypes...)
-			retVal2 = bt.SetTypes(btypes...)
+			retVal1 = at
+			retVal2 = bt
 			return
 		default:
 			err = errors.Errorf(nyi, "Unify of TypeOp ", b, b)

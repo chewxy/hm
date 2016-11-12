@@ -20,11 +20,13 @@ type TypeOp interface {
 	Type
 	Types() Types
 
-	SetTypes(...Type) TypeOp
 	Clone() TypeOp
+
+	// Replaces all the instances of tv with t. If your data structure is recursive, it needs to be replaced for the entire data structure
+	Replace(tv TypeVariable, t Type) TypeOp
 }
 
-// TypeConst is a constant type. SetTypes(...) will yield the same exact values. It's useful for implementing atomic types. Formerly called Atomic
+// TypeConst is a constant type. Replace() will not change the TypeOp. It's useful for implementing atomic types. Formerly called Atomic
 type TypeConst interface {
 	TypeOp
 	IsConstant() bool

@@ -117,13 +117,27 @@ func (env *SimpleEnv) fresh(t Type, k, v Types) (freshType Type, keys Types, val
 		return p.Clone(), k, v
 	case TypeOp:
 		pts := p.Types()
-		ts := make(Types, len(pts))
-		for i, tt := range pts {
-			ts[i], k, v = env.fresh(tt, k, v)
+		// ts := make(Types, len(pts))
+		// for i, tt := range pts {
+		// 	ts[i], k, v = env.fresh(tt, k, v)
+		// }
+		for i := 0; i < len(pts); i++ {
+			tt := pts[i]
+
+			var tt2 Type
+			tt2, k, v = env.fresh(tt, k, v)
+
+			if tv, ok := tt.(TypeVariable); ok {
+				p = p.Replace(tv, tt2)
+				pts = p.Types()
+			}
+
 		}
-		top := p.Clone()
-		top = top.SetTypes(ts...)
-		return top, k, v
+
+		// top := p.Clone()
+		// top = top.SetTypes(ts...)
+		// return top, k, v
+		return p, k, v
 	default:
 		panic("Not implemented yet")
 	}
@@ -226,13 +240,14 @@ func Infer(node Node, env Env) (retVal Type, err error) {
 		retType := NewTypeVar(randomStr(5))
 
 		fn := NewFnType(arg, retType)
+
 		var t0 Type
 		if t0, _, err = Unify(fn, fnType); err != nil {
 			return
 		}
 
 		fn = t0.(*FunctionType)
-		retVal = fn.ReturnType()
+		retVal = fn.ts[1]
 	case LetRec:
 		var tmp Type
 		tmp = NewTypeVar(randomStr(5))

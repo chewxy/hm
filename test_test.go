@@ -25,12 +25,12 @@ func (t particle) Eq(other Type) bool {
 	return false
 }
 
-func (t particle) Name() string                   { return t.String() }
-func (t particle) Format(state fmt.State, c rune) { fmt.Fprintf(state, t.String()) }
-func (t particle) Types() Types                   { return nil }
-func (t particle) Clone() TypeOp                  { return t }
-func (t particle) SetTypes(...Type) TypeOp        { return t }
-func (t particle) IsConstant() bool               { return true }
+func (t particle) Name() string                      { return t.String() }
+func (t particle) Format(state fmt.State, c rune)    { fmt.Fprintf(state, t.String()) }
+func (t particle) Types() Types                      { return nil }
+func (t particle) Clone() TypeOp                     { return t }
+func (t particle) Replace(TypeVariable, Type) TypeOp { return t }
+func (t particle) IsConstant() bool                  { return true }
 func (t particle) String() string {
 	switch t {
 	case proton:
@@ -79,7 +79,6 @@ func (t list) Name() string                   { return "List" }
 func (t list) Format(state fmt.State, c rune) { fmt.Fprintf(state, "List %v", t.t) }
 func (t list) String() string                 { return fmt.Sprintf("List %v", t.t) }
 func (t list) Types() Types                   { return Types{t.t} }
-func (t list) SetTypes(ts ...Type) TypeOp     { return list{ts[0]} }
 func (t list) Clone() TypeOp {
 	retVal := list{}
 	switch tt := t.t.(type) {
@@ -89,6 +88,22 @@ func (t list) Clone() TypeOp {
 		retVal.t = tt.Clone()
 	}
 	return retVal
+}
+
+func (t list) Replace(tv TypeVariable, with Type) TypeOp {
+	switch tt := t.t.(type) {
+	case TypeVariable:
+		if tt.Eq(tv) {
+			t.t = with
+		}
+	case TypeConst:
+		// do nothing
+	case TypeOp:
+		t.t = tt.Replace(tv, t)
+	default:
+		panic("WTF")
+	}
+	return t
 }
 
 // mirrorUniverseList is a List with a different name
