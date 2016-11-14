@@ -1,6 +1,7 @@
 package hm
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -99,4 +100,15 @@ func TestTypes(t *testing.T) {
 
 	// ToSlices (for completeness)
 	assert.Equal([]Type{electron, proton, neutron}, set.ToSlice())
+
+	// Index (for completeness)
+	assert.Equal(-1, set.Index(photon))
+	assert.Equal(0, set.Index(electron))
+	assert.Equal(1, set.Index(proton))
+
+	// Clone (for completeness)
+	assert.Equal(set, set.Clone())
+
+	// Format
+	assert.Equal("Types[electron, proton, neutron]", fmt.Sprintf("%v", set))
 }

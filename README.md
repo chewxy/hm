@@ -1,4 +1,4 @@
-# hm [![GoDoc](https://godoc.org/github.com/chewxy/hm?status.svg)](https://godoc.org/github.com/chewxy/hm) [![Build Status](https://travis-ci.org/chewxy/hm.svg?branch=master)](https://travis-ci.org/chewxy/hm) [![Coverage Status](https://coveralls.io/repos/github/chewxy/hm/badge.svg?branch=master)](https://coveralls.io/github/chewxy/hm?branch=master)
+# hm [![GoDoc](https://godoc.org/github.com/chewxy/hm?status.svg)](https://godoc.org/github.com/chewxy/hm) [![Build Status](https://travis-ci.org/chewxy/hm.svg?branch=master)](https://travis-ci.org/chewxy/hm) [![Coverage Status](https://coveralls.io/repos/github/chewxy/hm/badge.png)](https://coveralls.io/github/chewxy/hm)
 
 Package hm is a simple Hindley-Milner type inference system in Go. It provides the necessary data structures and functions for creating such a system. 
 
