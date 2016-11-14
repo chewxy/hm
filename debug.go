@@ -10,38 +10,37 @@ import (
 	"sync/atomic"
 )
 
+// DEBUG returns true when it's in debug mode
 const DEBUG = true
 
-var TABCOUNT uint32
-
-var TRACK = false
+var tabcount uint32
 
 var _logger_ = log.New(os.Stderr, "", 0)
 var replacement = "\n"
 
-func tabcount() int {
-	return int(atomic.LoadUint32(&TABCOUNT))
+func tc() int {
+	return int(atomic.LoadUint32(&tabcount))
 }
 
 func enterLoggingContext() {
-	atomic.AddUint32(&TABCOUNT, 1)
-	tabcount := tabcount()
-	_logger_.SetPrefix(strings.Repeat("\t", tabcount))
-	replacement = "\n" + strings.Repeat("\t", tabcount)
+	atomic.AddUint32(&tabcount, 1)
+	tabs := tc()
+	_logger_.SetPrefix(strings.Repeat("\t", tabs))
+	replacement = "\n" + strings.Repeat("\t", tabs)
 }
 
 func leaveLoggingContext() {
-	tabcount := tabcount()
-	tabcount--
+	tabs := tc()
+	tabs--
 
-	if tabcount < 0 {
-		atomic.StoreUint32(&TABCOUNT, 0)
-		tabcount = 0
+	if tabs < 0 {
+		atomic.StoreUint32(&tabcount, 0)
+		tabs = 0
 	} else {
-		atomic.StoreUint32(&TABCOUNT, uint32(tabcount))
+		atomic.StoreUint32(&tabcount, uint32(tabs))
 	}
-	_logger_.SetPrefix(strings.Repeat("\t", tabcount))
-	replacement = "\n" + strings.Repeat("\t", tabcount)
+	_logger_.SetPrefix(strings.Repeat("\t", tabs))
+	replacement = "\n" + strings.Repeat("\t", tabs)
 }
 
 func logf(format string, others ...interface{}) {

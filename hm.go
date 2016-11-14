@@ -2,6 +2,7 @@ package hm
 
 import "github.com/pkg/errors"
 
+// Env is the environment at which a type is live.
 type Env interface {
 	// TypeOf returns the type of the identifier
 	TypeOf(id string) (Type, error)
@@ -27,6 +28,7 @@ type Env interface {
 
 type SimpleEnvConsOpt func(*SimpleEnv)
 
+// WithDict is an option for constructing a *SumpleEnv with a pre-defined dictionary of known types
 func WithDict(m map[string]Type) SimpleEnvConsOpt {
 	f := func(env *SimpleEnv) {
 		env.m = m
@@ -34,6 +36,7 @@ func WithDict(m map[string]Type) SimpleEnvConsOpt {
 	return f
 }
 
+// WithConcreteVars is an option for constructing a *SimpleEnv with a pre-defined list of concrete type variables
 func WithConcreteVars(s Types) SimpleEnvConsOpt {
 	f := func(env *SimpleEnv) {
 		env.s = env.s.Union(s)
@@ -41,6 +44,7 @@ func WithConcreteVars(s Types) SimpleEnvConsOpt {
 	return f
 }
 
+// A SimpleEnv is a very rudimentary structure for mapping a name a type
 type SimpleEnv struct {
 	m map[string]Type
 	s Types
@@ -48,6 +52,7 @@ type SimpleEnv struct {
 	r map[TypeVariable]Type
 }
 
+// NewSimpleEnv creates a *SimpleEnv
 func NewSimpleEnv(opts ...SimpleEnvConsOpt) *SimpleEnv {
 	env := &SimpleEnv{
 		m: make(map[string]Type),
@@ -146,11 +151,6 @@ func (env *SimpleEnv) fresh(t Type) (freshType Type) {
 	case TypeOp:
 		pts := p.Types()
 
-		// ts := make(Types, len(pts))
-		// for i, tt := range pts {
-		// 	ts[i], k, v = env.fresh(tt, k, v)
-		// }
-		enterLoggingContext()
 		for i := 0; i < len(pts); i++ {
 			tt := pts[i]
 
@@ -163,11 +163,6 @@ func (env *SimpleEnv) fresh(t Type) (freshType Type) {
 			}
 
 		}
-		leaveLoggingContext()
-
-		// top := p.Clone()
-		// top = top.SetTypes(ts...)
-		// return top, k, v
 
 		return p
 	default:

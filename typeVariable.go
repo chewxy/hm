@@ -2,6 +2,7 @@ package hm
 
 import "fmt"
 
+// TypeVariable represents a type variable. It allows polymorphic types
 type TypeVariable struct {
 	name     string
 	instance Type
@@ -11,6 +12,7 @@ type TypeVariable struct {
 
 type TypeVarConsOpt func(tv *TypeVariable)
 
+// WithInstance is an option that creates a TypeVariable with an instance already
 func WithInstance(t Type) TypeVarConsOpt {
 	f := func(tv *TypeVariable) {
 		tv.instance = t
@@ -18,6 +20,7 @@ func WithInstance(t Type) TypeVarConsOpt {
 	return f
 }
 
+// WithConstraints is an option that creates a TypeVariable with a type class constraints
 func WithConstraints(cs *TypeClassSet) TypeVarConsOpt {
 	f := func(tv *TypeVariable) {
 		tv.constraints = cs
@@ -25,6 +28,7 @@ func WithConstraints(cs *TypeClassSet) TypeVarConsOpt {
 	return f
 }
 
+// NewTypeVar creates a new TypeVariable
 func NewTypeVar(name string, opts ...TypeVarConsOpt) TypeVariable {
 	retVal := TypeVariable{
 		name: name,
@@ -104,32 +108,7 @@ func (t TypeVariable) String() string {
 	return t.name
 }
 
-// func (t TypeVariable) In(t0 Type) bool {
-// 	pruned := Prune(t0)
-
-// 	if ptv, ok := pruned.(TypeVariable); ok && t.Eq(ptv) {
-// 		return true
-// 	}
-
-// 	if op, ok := pruned.(TypeOp); ok {
-// 		ts := op.Types()
-// 		if len(ts) == 1 {
-
-// 		}
-// 		return t.InTypes(ts)
-// 	}
-// 	return false
-// }
-
-// func (t TypeVariable) InTypes(ts Types) bool {
-// 	for _, typ := range ts {
-// 		if t.In(typ) {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
+// IsEmpty returns true if it's a dummy/empty type variable - defined as a TypeVariable with no name, and no constraints nor instances
 func (t TypeVariable) IsEmpty() bool {
 	return t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints.s) == 0)
 }

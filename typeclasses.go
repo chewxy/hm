@@ -26,7 +26,7 @@ func NewTypeClassSet(a ...TypeClass) *TypeClassSet {
 
 // ToSlice returns the elements of the current set as a slice
 func (set *TypeClassSet) ToSlice() []TypeClass {
-	return []TypeClass(set.s)
+	return set.s
 }
 
 // ContainsALl determines if all the wanted items are already in set

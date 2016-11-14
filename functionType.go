@@ -7,6 +7,7 @@ type FunctionType struct {
 	ts [2]Type // from → to
 }
 
+// NewFnType creates a new *FunctionType
 func NewFnType(params ...Type) *FunctionType {
 	if len(params) < 2 {
 		panic(fmt.Sprintf("Needs more than 2 params to make a function. Got %v", params))
