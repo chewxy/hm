@@ -111,8 +111,8 @@ func TestTypeVariableBasics(t *testing.T) {
 }
 
 func TestTVConsOpt(t *testing.T) {
-	constraints := TypeClassSet{
-		&SimpleTypeClass{},
+	constraints := &TypeClassSet{
+		s: []TypeClass{&SimpleTypeClass{}},
 	}
 
 	tv0 := NewTypeVar("a", WithConstraints(constraints))

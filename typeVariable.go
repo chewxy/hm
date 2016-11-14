@@ -6,7 +6,7 @@ type TypeVariable struct {
 	name     string
 	instance Type
 
-	constraints TypeClassSet
+	constraints *TypeClassSet
 }
 
 type TypeVarConsOpt func(tv *TypeVariable)
@@ -18,7 +18,7 @@ func WithInstance(t Type) TypeVarConsOpt {
 	return f
 }
 
-func WithConstraints(cs TypeClassSet) TypeVarConsOpt {
+func WithConstraints(cs *TypeClassSet) TypeVarConsOpt {
 	f := func(tv *TypeVariable) {
 		tv.constraints = cs
 	}
@@ -131,5 +131,5 @@ func (t TypeVariable) String() string {
 // }
 
 func (t TypeVariable) IsEmpty() bool {
-	return t.name == "" && t.instance == nil && len(t.constraints) == 0
+	return t.name == "" && t.instance == nil && len(t.constraints.s) == 0
 }

@@ -26,20 +26,20 @@ func TestTypeClassSet(t *testing.T) {
 	assert := assert.New(t)
 	set := NewTypeClassSet()
 	set2 := NewTypeClassSet(typeclasses2...)
-	assert.Equal(0, len(set), "Expected empty set")
-	assert.Equal(2, len(set2), "Expected a set with 2 elements")
+	assert.Equal(0, len(set.s), "Expected empty set")
+	assert.Equal(2, len(set2.s), "Expected a set with 2 elements")
 
 	// add
 	for _, tc := range typeclasses1 {
 		set = set.Add(tc)
 	}
 
-	assert.Equal(TypeClassSet{num, floating, ord}, set)
+	assert.Equal(NewTypeClassSet(num, floating, ord), set)
 	assert.True(set.ContainsAll(typeclasses1...))
 	assert.False(set.ContainsAll(typeclasses2...))
 
 	// subset and superset
-	subset := TypeClassSet{num}
+	subset := NewTypeClassSet(num)
 	assert.True(subset.IsSubsetOf(set))
 	assert.True(set.IsSupersetOf(subset))
 	assert.False(subset.IsSupersetOf(set))
@@ -47,11 +47,11 @@ func TestTypeClassSet(t *testing.T) {
 	assert.False(subset.IsSubsetOf(set2))
 
 	// intersect, union and differences
-	assert.Equal(TypeClassSet{ord}, set.Intersect(set2))
-	assert.Equal(TypeClassSet{num, floating, ord, eq}, set.Union(set2))
-	assert.Equal(TypeClassSet{num, floating}, set.Difference(set2))
-	assert.Equal(TypeClassSet{eq}, set2.Difference(set))
-	assert.Equal(TypeClassSet{num, floating, eq}, set.SymmetricDifference(set2))
+	assert.Equal(NewTypeClassSet(ord), set.Intersect(set2))
+	assert.Equal(NewTypeClassSet(num, floating, ord, eq), set.Union(set2))
+	assert.Equal(NewTypeClassSet(num, floating), set.Difference(set2))
+	assert.Equal(NewTypeClassSet(eq), set2.Difference(set))
+	assert.Equal(NewTypeClassSet(num, floating, eq), set.SymmetricDifference(set2))
 
 	// empty sets
 	emptySet := NewTypeClassSet()
@@ -61,9 +61,9 @@ func TestTypeClassSet(t *testing.T) {
 	assert.Equal(set, emptySet.Union(set))
 
 	// set equality
-	assert.True(TypeClassSet{ord, eq}.Equals(TypeClassSet{eq, ord}))
-	assert.False(TypeClassSet{ord}.Equals(TypeClassSet{eq, ord}))
-	assert.False(TypeClassSet{ord}.Equals(TypeClassSet{eq}))
+	assert.True(NewTypeClassSet(ord, eq).Equals(NewTypeClassSet(eq, ord)))
+	assert.False(NewTypeClassSet(ord).Equals(NewTypeClassSet(eq, ord)))
+	assert.False(NewTypeClassSet(ord).Equals(NewTypeClassSet(eq)))
 
 	// string (for completeness)
 	assert.Equal("TypeClassSet[Num, Floating, Ord]", set.String())
