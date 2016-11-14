@@ -131,5 +131,5 @@ func (t TypeVariable) String() string {
 // }
 
 func (t TypeVariable) IsEmpty() bool {
-	return t.name == "" && t.instance == nil && len(t.constraints.s) == 0
+	return t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints.s) == 0)
 }

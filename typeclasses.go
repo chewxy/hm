@@ -71,7 +71,7 @@ func (set *TypeClassSet) IsSupersetOf(other *TypeClassSet) bool {
 // Intersect performs an intersection between two sets - only items that exist in both are returned
 func (set *TypeClassSet) Intersect(other *TypeClassSet) *TypeClassSet {
 	switch {
-	case other == nil || len(set.s) == 0 || len(other.s) == 0:
+	case set == nil || other == nil || len(set.s) == 0 || len(other.s) == 0:
 		return nil
 	default:
 		retVal := new(TypeClassSet)
@@ -87,17 +87,19 @@ func (set *TypeClassSet) Intersect(other *TypeClassSet) *TypeClassSet {
 
 //Union joins both sets together, keeping only unique items
 func (set *TypeClassSet) Union(other *TypeClassSet) *TypeClassSet {
+	setIsEmpty := set == nil || len(set.s) == 0
+	otherIsEmpty := other == nil || len(other.s) == 0
+
 	switch {
-	case other == nil || len(set.s) == 0 && len(other.s) == 0:
+	case setIsEmpty && otherIsEmpty:
 		return nil
-	case len(set.s) == 0 && len(other.s) > 0:
+	case setIsEmpty && !otherIsEmpty:
 		return other
-	case len(set.s) > 0 && len(other.s) == 0:
+	case !setIsEmpty && otherIsEmpty:
 		return set
 	default:
 		retVal := new(TypeClassSet)
 		retVal.s = make([]TypeClass, len(set.s))
-		retVal.s = retVal.s[:0]
 		copy(retVal.s, set.s)
 		for _, o := range other.s {
 			if !retVal.Contains(o) {

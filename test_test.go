@@ -121,3 +121,29 @@ func (t malformed) Contains(tv TypeVariable) bool  { return false }
 func (t malformed) Eq(other Type) bool             { return false }
 func (t malformed) Format(state fmt.State, c rune) { fmt.Fprintf(state, "malformed") }
 func (t malformed) String() string                 { return "malformed" }
+
+func typeEqAnyVar(a, b Type) bool {
+	switch at := a.(type) {
+	case *FunctionType:
+		if bt, ok := b.(*FunctionType); ok {
+			if !typeEqAnyVar(at.ts[0], bt.ts[0]) {
+				return false
+			}
+			if !typeEqAnyVar(at.ts[1], bt.ts[1]) {
+				return false
+			}
+			return true
+		}
+		return false
+	case TypeVariable:
+		if bt, ok := b.(TypeVariable); ok {
+			if at.name == "∀" || bt.name == "∀" {
+				return true
+			}
+			return at.name == bt.name
+		}
+		return false
+	default:
+		return a.Eq(b)
+	}
+}

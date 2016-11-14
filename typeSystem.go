@@ -23,10 +23,9 @@ import "github.com/pkg/errors"
 //		 a ~ T : [a/T]
 //
 // The more complicated constructor unification and arrow unification isn't quite covered yet.
-func Unify(t1, t2 Type) (retVal1, retVal2 Type, err error) {
+func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Type, err error) {
 	enterLoggingContext()
 	defer leaveLoggingContext()
-
 	a := Prune(t1)
 	b := Prune(t2)
 
@@ -37,7 +36,6 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, err error) {
 		switch bt := b.(type) {
 		case TypeVariable:
 			retVal2, retVal1, err = UnifyVar(bt, at) // note the order change
-			return
 		case TypeOp:
 			atypes := at.Types()
 			btypes := bt.Types()
@@ -52,16 +50,33 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, err error) {
 				t_b = btypes[i]
 
 				var t_a2, t_b2 Type
-				if t_a2, t_b2, err = Unify(t_a, t_b); err != nil {
+				var r2 map[TypeVariable]Type
+				if t_a2, t_b2, r2, err = Unify(t_a, t_b); err != nil {
 					return
+				}
+
+				if replacements == nil {
+					replacements = r2
+				} else {
+					for k, v := range r2 {
+						replacements[k] = v
+					}
 				}
 
 				if tv, ok := t_a.(TypeVariable); ok {
 					at = at.Replace(tv, Prune(t_a2))
+					if replacements == nil {
+						replacements = make(map[TypeVariable]Type)
+					}
+					replacements[tv] = t_a2
 				}
 
 				if tv, ok := t_b.(TypeVariable); ok {
 					bt = bt.Replace(tv, Prune(t_b2))
+					if replacements == nil {
+						replacements = make(map[TypeVariable]Type)
+					}
+					replacements[tv] = t_b2
 				}
 
 				atypes = at.Types()
@@ -91,14 +106,15 @@ func UnifyVar(tv TypeVariable, t Type) (ret1, ret2 Type, err error) {
 	}
 	ret1 = tv
 	ret2 = t
-
-	var unioned TypeClassSet
+	var unioned *TypeClassSet
 	if ttv, ok := t.(TypeVariable); ok {
 		if ttv.IsEmpty() {
 			return
 		}
 
 		if t.Eq(ttv) {
+			if tv.constraints == nil {
+			}
 			unioned = tv.constraints.Union(ttv.constraints)
 
 			tv.constraints = unioned

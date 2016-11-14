@@ -63,19 +63,22 @@ func (t *FunctionType) Types() Types { return Types(t.ts[:]) }
 func (t *FunctionType) Replace(tv TypeVariable, with Type) TypeOp {
 	switch tt := t.ts[0].(type) {
 	case TypeVariable:
-		t.ts[0] = with
+		if tt.Eq(tv) {
+			t.ts[0] = with
+		}
 	case TypeConst:
 		// do nothing
 	case TypeOp:
-		tt = tt.Replace(tv, with)
-		t.ts[0] = tt
+		t.ts[0] = tt.Replace(tv, with)
 	default:
 		panic("WTF?")
 	}
 
 	switch tt := t.ts[1].(type) {
 	case TypeVariable:
-		t.ts[1] = with
+		if tt.Eq(tv) {
+			t.ts[1] = with
+		}
 	case TypeConst:
 		// do nothing
 	case TypeOp:

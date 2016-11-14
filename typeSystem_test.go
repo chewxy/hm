@@ -62,7 +62,7 @@ func TestUnify(t *testing.T) {
 	for _, uts := range unifyTests {
 		t0 = uts.a
 		t1 = uts.b
-		u0, u1, err = Unify(t0, t1)
+		u0, u1, _, err = Unify(t0, t1)
 		switch {
 		case err == nil && (uts.retA == nil && uts.retB == nil):
 			t.Errorf("Test %q - Expected an error: %v | u0: %#v, u1: %#v", uts.name, err, u0, u1)

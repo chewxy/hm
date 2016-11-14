@@ -12,6 +12,12 @@ type Env interface {
 	// AddSpecified adds a TypeVariable to the set of specified type variables
 	AddConcreteVar(tv TypeVariable) Env
 
+	// AddReplacements adds a replacement
+	AddReplacement(map[TypeVariable]Type) Env
+
+	// Replacements returns the set of replacements
+	Replacements() map[TypeVariable]Type
+
 	// Specified is a set of TypeVariables that have been specified
 	ConcreteVars() Types
 
@@ -38,11 +44,14 @@ func WithConcreteVars(s Types) SimpleEnvConsOpt {
 type SimpleEnv struct {
 	m map[string]Type
 	s Types
+
+	r map[TypeVariable]Type
 }
 
 func NewSimpleEnv(opts ...SimpleEnvConsOpt) *SimpleEnv {
 	env := &SimpleEnv{
 		m: make(map[string]Type),
+		r: make(map[TypeVariable]Type),
 	}
 
 	for _, opt := range opts {
@@ -70,6 +79,17 @@ func (env *SimpleEnv) AddConcreteVar(tv TypeVariable) Env {
 	return env
 }
 
+func (env *SimpleEnv) AddReplacement(r map[TypeVariable]Type) Env {
+	for k, v := range r {
+		env.r[k] = v
+	}
+	return env
+}
+
+func (env *SimpleEnv) Replacements() map[TypeVariable]Type {
+	return env.r
+}
+
 func (env *SimpleEnv) ConcreteVars() Types {
 	return env.s
 }
@@ -80,52 +100,62 @@ func (env *SimpleEnv) Clone() Env {
 		m[k] = v
 	}
 
+	r := make(map[TypeVariable]Type)
+	for k, v := range env.r {
+		r[k] = v
+	}
+
 	s := make(Types, len(env.s))
 	copy(s, env.s)
 
 	return &SimpleEnv{
 		m: m,
 		s: s,
+		r: r,
 	}
 }
 
 func (env *SimpleEnv) Fresh(t Type) Type {
+	enterLoggingContext()
+	defer leaveLoggingContext()
 	// since TypeVariable cannot be a map key, we'll not use a map and use two slices to keep track of mapping instead
-	var k, v Types
-	retVal, _, _ := env.fresh(t, k, v)
+	retVal := env.fresh(t)
 	return retVal
 }
 
 // recursively creates a fresh type
-func (env *SimpleEnv) fresh(t Type, k, v Types) (freshType Type, keys Types, values Types) {
+func (env *SimpleEnv) fresh(t Type) (freshType Type) {
+	enterLoggingContext()
+	defer leaveLoggingContext()
+
 	switch p := Prune(t).(type) {
 	case TypeVariable:
 		if env.s.Contains(p) {
-			return p, k, v
+			return p
 		}
 
-		var i int
-		if i = k.Index(p); i > -1 {
-			return v[i], k, v
+		if tv, ok := env.r[p]; ok {
+			return tv
 		}
-
 		tv := NewTypeVar(randomStr(5))
-		k = append(k, p)
-		v = append(v, tv)
-		return tv, k, v
+		env.r[p] = tv
+		env.r[tv] = tv
+		return tv
 	case TypeConst:
-		return p.Clone(), k, v
+		return p.Clone()
 	case TypeOp:
 		pts := p.Types()
+
 		// ts := make(Types, len(pts))
 		// for i, tt := range pts {
 		// 	ts[i], k, v = env.fresh(tt, k, v)
 		// }
+		enterLoggingContext()
 		for i := 0; i < len(pts); i++ {
 			tt := pts[i]
 
 			var tt2 Type
-			tt2, k, v = env.fresh(tt, k, v)
+			tt2 = env.fresh(tt)
 
 			if tv, ok := tt.(TypeVariable); ok {
 				p = p.Replace(tv, tt2)
@@ -133,11 +163,13 @@ func (env *SimpleEnv) fresh(t Type, k, v Types) (freshType Type, keys Types, val
 			}
 
 		}
+		leaveLoggingContext()
 
 		// top := p.Clone()
 		// top = top.SetTypes(ts...)
 		// return top, k, v
-		return p, k, v
+
+		return p
 	default:
 		panic("Not implemented yet")
 	}
@@ -225,7 +257,13 @@ func Infer(node Node, env Env) (retVal Type, err error) {
 		if retVal, err = Infer(n.Body(), scope); err != nil {
 			return
 		}
-		retVal = NewFnType(argType, retVal)
+
+		if replacement, ok := scope.Replacements()[argType]; ok {
+			retVal = NewFnType(replacement, retVal)
+		} else {
+			retVal = NewFnType(argType, retVal)
+		}
+
 		return
 	case Apply:
 		var fnType Type
@@ -242,11 +280,17 @@ func Infer(node Node, env Env) (retVal Type, err error) {
 		fn := NewFnType(arg, retType)
 
 		var t0 Type
-		if t0, _, err = Unify(fn, fnType); err != nil {
+		var r map[TypeVariable]Type
+		if t0, _, r, err = Unify(fn, fnType); err != nil {
 			return
 		}
 
+		env = env.AddReplacement(r)
 		fn = t0.(*FunctionType)
+		for k, v := range r {
+			fn = fn.Replace(k, v).(*FunctionType)
+		}
+
 		retVal = fn.ts[1]
 	case LetRec:
 		var tmp Type
@@ -260,10 +304,12 @@ func Infer(node Node, env Env) (retVal Type, err error) {
 			return
 		}
 
-		if tmp, _, err = Unify(tmp, def); err != nil {
+		var r map[TypeVariable]Type
+		if tmp, _, r, err = Unify(tmp, def); err != nil {
 			return
 		}
 
+		env = env.AddReplacement(r)
 		scope = scope.Add(n.Name(), tmp)
 		return Infer(n.Body(), scope)
 

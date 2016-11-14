@@ -93,6 +93,30 @@ func TestFnBasics(t *testing.T) {
 	assert.Panics(t, f)
 }
 
+func TestFnTypeReplace(t *testing.T) {
+	assert := assert.New(t)
+	var t0, correct *FunctionType
+	var tv0, tv1 TypeVariable
+
+	tv0 = NewTypeVar("a")
+	t0 = NewFnType(tv0, tv0)
+	t0.Replace(tv0, proton)
+	correct = NewFnType(proton, proton)
+	assert.Equal(correct, t0)
+
+	tv1 = NewTypeVar("b")
+	t0 = NewFnType(tv0, tv1)
+	t0.Replace(tv0, proton)
+	correct = NewFnType(proton, tv1)
+	assert.Equal(correct, t0)
+
+	tv1 = NewTypeVar("a")
+	t0 = NewFnType(tv0, tv1)
+	t0.Replace(tv0, proton)
+	correct = NewFnType(proton, proton)
+	assert.Equal(correct, t0)
+}
+
 func TestFnTypeSpecials(t *testing.T) {
 	assert := assert.New(t)
 	var t0 *FunctionType

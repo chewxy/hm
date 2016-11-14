@@ -30,7 +30,7 @@ func (n lit) Name() string { return string(n) }
 func (n lit) Body() Node   { return n }
 func (n lit) Type() Type {
 	switch {
-	case strings.ContainsAny(digits, string(n)):
+	case strings.ContainsAny(digits, string(n)) && strings.ContainsAny(digits, string(n[0])):
 		return Float
 	case string(n) == "true" || string(n) == "false":
 		return Bool
@@ -115,10 +115,10 @@ func Example_greenspun() {
 			"n",
 			app{
 				λ{
-					"λ0",
+					"n",
 					app{
 						λ{
-							"λ1",
+							"n",
 							app{
 								lit("if"),
 								app{lit("isZero"), lit("n")},
@@ -129,7 +129,7 @@ func Example_greenspun() {
 				},
 				app{
 					λ{
-						"λ2",
+						"n",
 						app{lit("mul"), lit("n")},
 					},
 					app{
@@ -152,13 +152,14 @@ func Example_greenspun() {
 	var t Type
 	var err error
 	env := NewSimpleEnv(WithDict(predef))
+
 	if t, err = Infer(fac, env); err != nil {
 		log.Printf("%+v", errors.Cause(err))
 	}
 
 	fmt.Printf("Type: %v | err: %v", t, err)
 
-	// Ouput:
+	// Outputs:
 	// Type: Float | err: <nil>
 
 }

@@ -55,9 +55,8 @@ func init() {
 		{"App", app{lit("+"), lit("1")}, NewFnType(Float, Float), false},
 
 		// have to write helper functions to test these:
-
-		// {"Lambda", λ{"a", app{lit("+"), lit("1")}}, NewFnType(NewTypeVar("a"), Float), false},
-		// {"Lambda (+1)", λ{"a", app{lit("+1"), lit("a")}}, NewTypeVar("a"), false},
+		{"Lambda", λ{"a", app{lit("+"), lit("1")}}, NewFnType(NewTypeVar("∀"), Float, Float), false},
+		{"Lambda (+1)", λ{"a", app{lit("+1"), lit("a")}}, NewFnType(NewTypeVar("∀"), NewTypeVar("∀")), false},
 	}
 }
 
@@ -70,13 +69,13 @@ func TestInfer(t *testing.T) {
 		"+":  NewFnType(NewTypeVar("a"), NewFnType(NewTypeVar("a"), NewTypeVar("a"))),
 		"+1": NewFnType(NewTypeVar("a"), NewTypeVar("a")),
 	}
-	env := NewSimpleEnv(WithDict(m))
 	for _, its := range infer1 {
+		env := NewSimpleEnv(WithDict(m))
 		if t0, err = Infer(its.node, env); (its.err && err == nil) || (!its.err && err != nil) {
 			if its.err {
-				t.Errorf("Expected an error")
+				t.Errorf("Test %q: Expected an error", its.name)
 			} else {
-				t.Errorf("Err: %v", errors.Cause(err))
+				t.Errorf("Test %q Err: %v", its.name, errors.Cause(err))
 			}
 			continue
 		}
@@ -85,6 +84,8 @@ func TestInfer(t *testing.T) {
 			continue
 		}
 
-		assert.True(its.correct.Eq(t0), "Correct: %#v | Got %#v", its.correct, t0)
+		assert.True(typeEqAnyVar(its.correct, t0), "Test : %v Correct: %#v | Got %#v", its.name, its.correct, t0)
+
+		// assert.True(its.correct.Eq(t0), "Test : %v Correct: %#v | Got %#v", its.name, its.correct, t0)
 	}
 }
