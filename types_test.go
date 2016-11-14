@@ -88,6 +88,7 @@ func TestTypes(t *testing.T) {
 	assert.Nil(emptySet.Intersect(set))
 	assert.Equal(set, set.Union(emptySet))
 	assert.Equal(set, emptySet.Union(set))
+	assert.Nil(emptySet.Union(emptySet))
 
 	// set equality
 	assert.True(NewTypes(carbon...).Equals(NewTypes(lithium...)))

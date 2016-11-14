@@ -21,9 +21,10 @@ func WithInstance(t Type) TypeVarConsOpt {
 }
 
 // WithConstraints is an option that creates a TypeVariable with a type class constraints
-func WithConstraints(cs *TypeClassSet) TypeVarConsOpt {
+func WithConstraints(cs ...TypeClass) TypeVarConsOpt {
 	f := func(tv *TypeVariable) {
-		tv.constraints = cs
+		constraints := NewTypeClassSet(cs...)
+		tv.constraints = constraints
 	}
 	return f
 }

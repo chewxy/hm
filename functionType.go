@@ -13,7 +13,7 @@ func NewFnType(params ...Type) *FunctionType {
 		panic(fmt.Sprintf("Needs more than 2 params to make a function. Got %v", params))
 	}
 
-	t := borrowFnType()
+	t := new(FunctionType)
 	t.ts[0] = params[0]
 	if len(params) == 2 {
 		t.ts[1] = params[1]

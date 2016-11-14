@@ -61,6 +61,7 @@ func TestTypeClassSet(t *testing.T) {
 	assert.Equal(set, emptySet.Union(set))
 
 	// set equality
+	assert.True(set.Equals(set))
 	assert.True(NewTypeClassSet(ord, eq).Equals(NewTypeClassSet(eq, ord)))
 	assert.False(NewTypeClassSet(ord).Equals(NewTypeClassSet(eq, ord)))
 	assert.False(NewTypeClassSet(ord).Equals(NewTypeClassSet(eq)))
@@ -70,4 +71,13 @@ func TestTypeClassSet(t *testing.T) {
 
 	// ToSlices (for completeness)
 	assert.Equal([]TypeClass{num, floating, ord}, set.ToSlice())
+}
+
+// This is mostly for completeness sake
+func TestTypeClass(t *testing.T) {
+	assert := assert.New(t)
+	num.AddInstance(proton)
+
+	assert.Equal(Types{proton}, num.instances)
+	assert.Equal("Num", num.Name())
 }

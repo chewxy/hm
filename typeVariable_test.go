@@ -119,6 +119,6 @@ func TestTVConsOpt(t *testing.T) {
 		s: []TypeClass{&SimpleTypeClass{}},
 	}
 
-	tv0 := NewTypeVar("a", WithConstraints(constraints))
+	tv0 := NewTypeVar("a", WithConstraints(constraints.s...))
 	assert.Equal(t, constraints, tv0.constraints)
 }
