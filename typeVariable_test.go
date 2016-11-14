@@ -108,6 +108,10 @@ func TestTypeVariableBasics(t *testing.T) {
 	if tv0.Name() != "a" {
 		t.Error("Expected \"a\" to be the name")
 	}
+
+	t.Log("TypeVar Instance (for completeness sake")
+	t0 = NewTypeVar("a", WithInstance(proton))
+	assert.Equal(proton, t0.(TypeVariable).Instance())
 }
 
 func TestTVConsOpt(t *testing.T) {

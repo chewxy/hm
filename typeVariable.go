@@ -112,3 +112,6 @@ func (t TypeVariable) String() string {
 func (t TypeVariable) IsEmpty() bool {
 	return t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints.s) == 0)
 }
+
+// Instance returns the instance that defines the TypeVariable
+func (t TypeVariable) Instance() Type { return t.instance }
