@@ -99,6 +99,11 @@ func (t list) Replace(what, with Type) TypeOp {
 	case TypeConst:
 		// do nothing
 	case TypeOp:
+		// if tt.Eq(what) {
+		// 	t.t = with
+		// } else {
+		// 	t.t = tt.Replace(what, with)
+		// }
 		t.t = tt.Replace(what, with)
 	default:
 		panic("WTF")
