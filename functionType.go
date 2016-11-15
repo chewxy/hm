@@ -61,33 +61,42 @@ func (t *FunctionType) String() string { return fmt.Sprintf("%v", t) }
 
 func (t *FunctionType) Types() Types { return Types(t.ts[:]) }
 
-func (t *FunctionType) Replace(tv TypeVariable, with Type) TypeOp {
+func (t *FunctionType) Replace(what, with Type) TypeOp {
 	switch tt := t.ts[0].(type) {
 	case TypeVariable:
-		if tt.Eq(tv) {
+		if tt.Eq(what) {
 			t.ts[0] = with
 		}
 	case TypeConst:
 		// do nothing
 	case TypeOp:
-		t.ts[0] = tt.Replace(tv, with)
+		if t.ts[0].Eq(what) {
+			t.ts[0] = with
+		} else {
+			t.ts[0] = tt.Replace(what, with)
+		}
 	default:
-		panic("WTF?")
+		panic("Unreachable")
+
 	}
 
 	switch tt := t.ts[1].(type) {
 	case TypeVariable:
-		if tt.Eq(tv) {
+		if tt.Eq(what) {
 			t.ts[1] = with
 		}
 	case TypeConst:
 		// do nothing
 	case TypeOp:
-		t.ts[1] = tt.Replace(tv, with)
+		if tt.Eq(what) {
+			t.ts[1] = with
+		} else {
+			tt = tt.Replace(what, with)
+		}
 	default:
-		panic("WTF?")
-	}
+		panic("Unreachable")
 
+	}
 	return t
 }
 

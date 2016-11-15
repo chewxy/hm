@@ -25,12 +25,12 @@ func (t particle) Eq(other Type) bool {
 	return false
 }
 
-func (t particle) Name() string                      { return t.String() }
-func (t particle) Format(state fmt.State, c rune)    { fmt.Fprintf(state, t.String()) }
-func (t particle) Types() Types                      { return nil }
-func (t particle) Clone() TypeOp                     { return t }
-func (t particle) Replace(TypeVariable, Type) TypeOp { return t }
-func (t particle) IsConstant() bool                  { return true }
+func (t particle) Name() string                   { return t.String() }
+func (t particle) Format(state fmt.State, c rune) { fmt.Fprintf(state, t.String()) }
+func (t particle) Types() Types                   { return nil }
+func (t particle) Clone() TypeOp                  { return t }
+func (t particle) Replace(Type, Type) TypeOp      { return t }
+func (t particle) IsConstant() bool               { return true }
 func (t particle) String() string {
 	switch t {
 	case proton:
@@ -90,16 +90,16 @@ func (t list) Clone() TypeOp {
 	return retVal
 }
 
-func (t list) Replace(tv TypeVariable, with Type) TypeOp {
+func (t list) Replace(what, with Type) TypeOp {
 	switch tt := t.t.(type) {
 	case TypeVariable:
-		if tt.Eq(tv) {
+		if tt.Eq(what) {
 			t.t = with
 		}
 	case TypeConst:
 		// do nothing
 	case TypeOp:
-		t.t = tt.Replace(tv, t)
+		t.t = tt.Replace(what, with)
 	default:
 		panic("WTF")
 	}

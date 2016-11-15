@@ -46,6 +46,9 @@ var unifyTests = []struct {
 	{"List a ~ List proton", list{NewTypeVar("a")}, list{proton}, list{proton}, list{proton}, false},
 	{"List a ~ GoateeList proton", list{NewTypeVar("a")}, mirrorUniverseList{list{proton}}, nil, nil, true},
 
+	// function types
+	{"List a → List a ~ List proton → List proton", NewFnType(list{NewTypeVar("a")}, list{NewTypeVar("a")}), NewFnType(list{proton}, list{proton}), NewFnType(list{proton}, list{proton}), NewFnType(list{proton}, list{proton}), false},
+
 	{"malformed ~ a", malformed{}, NewTypeVar("a"), nil, nil, true},
 	{"proton ~ malformed{}", proton, malformed{}, nil, nil, true},
 

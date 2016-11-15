@@ -92,9 +92,9 @@ func (t prim) String() string {
 }
 
 // implement TypeOp
-func (t prim) Types() Types                      { return nil }
-func (t prim) Replace(TypeVariable, Type) TypeOp { return t }
-func (t prim) Clone() TypeOp                     { return t }
+func (t prim) Types() Types              { return nil }
+func (t prim) Replace(Type, Type) TypeOp { return t }
+func (t prim) Clone() TypeOp             { return t }
 
 func (t prim) IsConst() bool { return true }
 
@@ -159,7 +159,7 @@ func Example_greenspun() {
 
 	fmt.Printf("Type: %v | err: %v", t, err)
 
-	// Outputs:
+	// Outputs
 	// Type: Float | err: <nil>
 
 }
