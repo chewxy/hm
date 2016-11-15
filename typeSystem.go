@@ -24,9 +24,6 @@ import "github.com/pkg/errors"
 //
 // The more complicated constructor unification and arrow unification isn't quite covered yet.
 func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Type, err error) {
-	logf("Unifying %#v and %#v", t1, t2)
-	enterLoggingContext()
-	defer leaveLoggingContext()
 	a := Prune(t1)
 	b := Prune(t2)
 
@@ -61,13 +58,11 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Ty
 				return
 			}
 
-			enterLoggingContext()
 			var t_a, t_b Type
 			for i := 0; i < len(atypes); i++ {
 				t_a = atypes[i]
 				t_b = btypes[i]
 
-				logf("Unifying recursively %v and %v", t_a, t_b)
 				var t_a2, t_b2 Type
 				var r2 map[TypeVariable]Type
 				if t_a2, t_b2, r2, err = Unify(t_a, t_b); err != nil {
@@ -81,25 +76,17 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Ty
 						replacements[k] = v
 					}
 				}
-				logf("r: %v", replacements)
 
 				pt_a2 := Prune(t_a2)
 				pt_b2 := Prune(t_b2)
 
-				logf("Replacing %v with %v in %v", t_a, pt_a2, at)
-				logf("Replacing %v with %v in %v", t_b, pt_b2, bt)
-
 				at = at.Replace(t_a, pt_a2)
 				bt = bt.Replace(t_b, pt_b2)
 
-				logf("Replacing replacement map : %v", replacements)
 				for k, v := range replacements {
 					at = at.Replace(k, v)
 					bt = bt.Replace(k, v)
 				}
-
-				logf("at: %v", at)
-				logf("bt: %v", bt)
 
 				if tv, ok := t_a.(TypeVariable); ok {
 					replacements[tv] = pt_a2
@@ -112,7 +99,6 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Ty
 				atypes = at.Types()
 				btypes = bt.Types()
 			}
-			leaveLoggingContext()
 
 			retVal1 = at
 			retVal2 = bt
