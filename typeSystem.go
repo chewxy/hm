@@ -92,6 +92,11 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Ty
 				at = at.Replace(t_a, pt_a2)
 				bt = bt.Replace(t_b, pt_b2)
 
+				for k, v := range replacements {
+					at = at.Replace(k, v)
+					bt = bt.Replace(k, v)
+				}
+
 				logf("at: %v", at)
 				logf("bt: %v", bt)
 

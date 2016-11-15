@@ -48,6 +48,8 @@ var unifyTests = []struct {
 
 	// function types
 	{"List a → List a ~ List proton → List proton", NewFnType(list{NewTypeVar("a")}, list{NewTypeVar("a")}), NewFnType(list{proton}, list{proton}), NewFnType(list{proton}, list{proton}), NewFnType(list{proton}, list{proton}), false},
+	{"List a → a ~ List proton → proton", NewFnType(list{NewTypeVar("a")}, NewTypeVar("a")), NewFnType(list{proton}, proton), NewFnType(list{proton}, proton), NewFnType(list{proton}, proton), false},
+	{"List a → a ~ List proton → b", NewFnType(list{NewTypeVar("a")}, NewTypeVar("a")), NewFnType(list{proton}, NewTypeVar("b")), NewFnType(list{proton}, proton), NewFnType(list{proton}, proton), false},
 
 	{"malformed ~ a", malformed{}, NewTypeVar("a"), nil, nil, true},
 	{"proton ~ malformed{}", proton, malformed{}, nil, nil, true},
