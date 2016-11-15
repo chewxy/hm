@@ -52,7 +52,11 @@ func (t *FunctionType) Eq(other Type) bool {
 }
 
 func (t *FunctionType) Format(state fmt.State, c rune) {
-	fmt.Fprintf(state, "%s → %s", t.ts[0], t.ts[1])
+	if state.Flag('#') {
+		fmt.Fprintf(state, "%#v → %#v", t.ts[0], t.ts[1])
+	} else {
+		fmt.Fprintf(state, "%s → %s", t.ts[0], t.ts[1])
+	}
 }
 
 func (t *FunctionType) String() string { return fmt.Sprintf("%v", t) }
@@ -91,7 +95,7 @@ func (t *FunctionType) Replace(what, with Type) TypeOp {
 		if tt.Eq(what) {
 			t.ts[1] = with
 		} else {
-			tt = tt.Replace(what, with)
+			t.ts[1] = tt.Replace(what, with)
 		}
 	default:
 		panic("Unreachable")

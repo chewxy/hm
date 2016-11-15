@@ -44,12 +44,32 @@ var unifyTests = []struct {
 	// type op ~ type op
 	{"proton ~ proton", proton, proton, proton, proton, false},
 	{"List a ~ List proton", list{NewTypeVar("a")}, list{proton}, list{proton}, list{proton}, false},
-	{"List a ~ GoateeList proton", list{NewTypeVar("a")}, mirrorUniverseList{list{proton}}, nil, nil, true},
+	{"List a ~ GoateeList proton", list{NewTypeVar("a")}, mirrorUniverseList{proton}, nil, nil, true},
 
 	// function types
 	{"List a → List a ~ List proton → List proton", NewFnType(list{NewTypeVar("a")}, list{NewTypeVar("a")}), NewFnType(list{proton}, list{proton}), NewFnType(list{proton}, list{proton}), NewFnType(list{proton}, list{proton}), false},
 	{"List a → a ~ List proton → proton", NewFnType(list{NewTypeVar("a")}, NewTypeVar("a")), NewFnType(list{proton}, proton), NewFnType(list{proton}, proton), NewFnType(list{proton}, proton), false},
 	{"List a → a ~ List proton → b", NewFnType(list{NewTypeVar("a")}, NewTypeVar("a")), NewFnType(list{proton}, NewTypeVar("b")), NewFnType(list{proton}, proton), NewFnType(list{proton}, proton), false},
+	{"List a → a → List a ~ List proton → proton → b",
+		NewFnType(list{NewTypeVar("a")}, NewTypeVar("a"), list{NewTypeVar("a")}),
+		NewFnType(list{proton}, proton, NewTypeVar("b")),
+		NewFnType(list{proton}, proton, list{proton}),
+		NewFnType(list{proton}, proton, list{proton}),
+		false},
+
+	{"List proton → proton → b ~ List a → a → List a",
+		NewFnType(list{proton}, proton, NewTypeVar("b")),
+		NewFnType(list{NewTypeVar("a")}, NewTypeVar("a"), list{NewTypeVar("a")}),
+		NewFnType(list{proton}, proton, list{proton}),
+		NewFnType(list{proton}, proton, list{proton}),
+		false},
+
+	{"List proton → proton → b ~ List a → a → GoateeList a",
+		NewFnType(list{proton}, proton, NewTypeVar("b")),
+		NewFnType(list{NewTypeVar("a")}, NewTypeVar("a"), mirrorUniverseList{NewTypeVar("a")}),
+		NewFnType(list{proton}, proton, mirrorUniverseList{proton}),
+		NewFnType(list{proton}, proton, mirrorUniverseList{proton}),
+		false},
 
 	{"malformed ~ a", malformed{}, NewTypeVar("a"), nil, nil, true},
 	{"proton ~ malformed{}", proton, malformed{}, nil, nil, true},
@@ -69,28 +89,17 @@ func TestUnify(t *testing.T) {
 		t1 = uts.b
 		u0, u1, _, err = Unify(t0, t1)
 		switch {
-		case err == nil && (uts.retA == nil && uts.retB == nil):
+		case err == nil && uts.e:
 			t.Errorf("Test %q - Expected an error: %v | u0: %#v, u1: %#v", uts.name, err, u0, u1)
-			continue
-		case err != nil && (uts.retA != nil && uts.retB != nil):
+		case err != nil && !uts.e:
 			t.Errorf("Test %q errored: %v ", uts.name, err)
-			continue
-		case err != nil && (uts.retA == nil && uts.retB == nil):
-			// all good, an error was expected, and an error was returned
-			continue
 		}
 
-		if uts.retA == nil {
-			assert.Nil(u0)
-		} else {
-			assert.Equal(uts.retA, u0, "Test: %q\nWant:\n%# v  \nGot:\n%# v", uts.name, uts.retA, u0)
+		if uts.e {
+			continue
 		}
-
-		if uts.retB == nil {
-			assert.Nil(u1)
-		} else {
-			assert.Equal(uts.retB, u1, "Test: %q\nWant:\n%# v  \nGot:\n%# v", uts.name, uts.retB, u1)
-		}
+		assert.Equal(uts.retA, u0, "Test: %q\nWant:\n%# v  \nGot:\n%# v", uts.name, uts.retA, u0)
+		assert.Equal(uts.retB, u1, "Test: %q\nWant:\n%# v  \nGot:\n%# v", uts.name, uts.retB, u1)
 	}
 
 }

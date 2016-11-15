@@ -32,6 +32,10 @@ func TestFnBasics(t *testing.T) {
 		t.Errorf("Basic Format error. Got %q", fmt.Sprintf("%v", t0))
 	}
 
+	if fmt.Sprintf("%#v", t0) != name {
+		t.Errorf("Basic Format error. Got %q", fmt.Sprintf("%v", t0))
+	}
+
 	if t0.String() != name {
 		t.Errorf("Basic String error: Got %q", t0.String())
 	}

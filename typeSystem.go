@@ -24,7 +24,7 @@ import "github.com/pkg/errors"
 //
 // The more complicated constructor unification and arrow unification isn't quite covered yet.
 func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Type, err error) {
-	logf("Unifying %v and %v", t1, t2)
+	logf("Unifying %#v and %#v", t1, t2)
 	enterLoggingContext()
 	defer leaveLoggingContext()
 	a := Prune(t1)
@@ -92,6 +92,7 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Ty
 				at = at.Replace(t_a, pt_a2)
 				bt = bt.Replace(t_b, pt_b2)
 
+				logf("Replacing replacement map : %v", replacements)
 				for k, v := range replacements {
 					at = at.Replace(k, v)
 					bt = bt.Replace(k, v)

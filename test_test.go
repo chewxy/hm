@@ -112,10 +112,59 @@ func (t list) Replace(what, with Type) TypeOp {
 
 // mirrorUniverseList is a List with a different name
 type mirrorUniverseList struct {
-	list
+	t Type
 }
 
-func (t mirrorUniverseList) Name() string { return "GoateeList" }
+func (t mirrorUniverseList) Contains(tv TypeVariable) bool {
+	ttv, ok := t.t.(TypeVariable)
+	if !ok {
+		return false
+	}
+
+	return ttv.Eq(tv)
+}
+
+func (t mirrorUniverseList) Eq(other Type) bool {
+	if tl, ok := other.(mirrorUniverseList); ok {
+		return t.t.Eq(tl.t)
+	}
+	return false
+}
+
+func (t mirrorUniverseList) Name() string                   { return "GoateeList" }
+func (t mirrorUniverseList) String() string                 { return fmt.Sprintf("GoateeList %v", t.t) }
+func (t mirrorUniverseList) Format(state fmt.State, c rune) { fmt.Fprintf(state, "GoateeList %v", t.t) }
+func (t mirrorUniverseList) Types() Types                   { return Types{t.t} }
+func (t mirrorUniverseList) Clone() TypeOp {
+	retVal := list{}
+	switch tt := t.t.(type) {
+	case TypeVariable:
+		retVal.t = tt
+	case TypeOp:
+		retVal.t = tt.Clone()
+	}
+	return retVal
+}
+
+func (t mirrorUniverseList) Replace(what, with Type) TypeOp {
+	switch tt := t.t.(type) {
+	case TypeVariable:
+		if tt.Eq(what) {
+			t.t = with
+		}
+	case TypeConst:
+		// do nothing
+	case TypeOp:
+		if tt.Eq(what) {
+			t.t = with
+		} else {
+			t.t = tt.Replace(what, with)
+		}
+	default:
+		panic("WTF")
+	}
+	return t
+}
 
 // malformed is an incomplete Type
 type malformed struct{}
