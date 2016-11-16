@@ -13,7 +13,7 @@ func NewFnType(params ...Type) *FunctionType {
 		panic(fmt.Sprintf("Needs more than 2 params to make a function. Got %v", params))
 	}
 
-	t := new(FunctionType)
+	t := borrowFnType()
 	t.ts[0] = params[0]
 	if len(params) == 2 {
 		t.ts[1] = params[1]
@@ -28,7 +28,7 @@ func NewFnType(params ...Type) *FunctionType {
 
 func (t *FunctionType) Name() string { return "→" }
 
-func (t *FunctionType) Contains(tv TypeVariable) bool {
+func (t *FunctionType) Contains(tv *TypeVariable) bool {
 	for _, ty := range t.ts {
 		if ty.Contains(tv) {
 			return true
@@ -61,54 +61,25 @@ func (t *FunctionType) Format(state fmt.State, c rune) {
 
 func (t *FunctionType) String() string { return fmt.Sprintf("%v", t) }
 
-/* TypeOp interface fulfilment */
-
-func (t *FunctionType) Types() Types { return Types(t.ts[:]) }
-
-func (t *FunctionType) Replace(what, with Type) TypeOp {
-	switch tt := t.ts[0].(type) {
-	case TypeVariable:
-		if tt.Eq(what) {
-			t.ts[0] = with
-		}
-	case TypeConst:
-		// do nothing
-	case TypeOp:
-		if t.ts[0].Eq(what) {
-			t.ts[0] = with
-		} else {
-			t.ts[0] = tt.Replace(what, with)
-		}
-	default:
-		panic("Unreachable")
-
+func (t *FunctionType) Prune() Type {
+	if tv, ok := t.ts[0].(*TypeVariable); ok {
+		t.ts[0] = Prune(tv)
 	}
-
-	switch tt := t.ts[1].(type) {
-	case TypeVariable:
-		if tt.Eq(what) {
-			t.ts[1] = with
-		}
-	case TypeConst:
-		// do nothing
-	case TypeOp:
-		if tt.Eq(what) {
-			t.ts[1] = with
-		} else {
-			t.ts[1] = tt.Replace(what, with)
-		}
-	default:
-		panic("Unreachable")
-
+	if tv, ok := t.ts[1].(*TypeVariable); ok {
+		t.ts[1] = Prune(tv)
 	}
 	return t
 }
+
+/* TypeOp interface fulfilment */
+
+func (t *FunctionType) Types() Types { return Types(t.ts[:]) }
 
 func (t *FunctionType) Clone() TypeOp {
 	retVal := new(FunctionType)
 
 	switch tt := t.ts[0].(type) {
-	case TypeVariable:
+	case *TypeVariable:
 		retVal.ts[0] = tt
 	case TypeConst:
 		retVal.ts[0] = tt
@@ -119,7 +90,7 @@ func (t *FunctionType) Clone() TypeOp {
 	}
 
 	switch tt := t.ts[1].(type) {
-	case TypeVariable:
+	case *TypeVariable:
 		retVal.ts[1] = tt
 	case TypeConst:
 		retVal.ts[1] = tt
@@ -130,6 +101,10 @@ func (t *FunctionType) Clone() TypeOp {
 	}
 
 	return retVal
+}
+
+func (t *FunctionType) New(ts ...Type) TypeOp {
+	return NewFnType(ts...)
 }
 
 /* Useful methods */

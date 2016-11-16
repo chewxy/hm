@@ -70,8 +70,8 @@ const (
 )
 
 // implement Type
-func (t prim) Name() string                  { return t.String() }
-func (t prim) Contains(tv TypeVariable) bool { return false }
+func (t prim) Name() string                   { return t.String() }
+func (t prim) Contains(tv *TypeVariable) bool { return false }
 func (t prim) Eq(other Type) bool {
 	ot, ok := other.(prim)
 	if !ok {
@@ -91,10 +91,12 @@ func (t prim) String() string {
 	return "HELP"
 }
 
+func (t prim) Prune() Type { return t }
+
 // implement TypeOp
-func (t prim) Types() Types              { return nil }
-func (t prim) Replace(Type, Type) TypeOp { return t }
-func (t prim) Clone() TypeOp             { return t }
+func (t prim) Types() Types       { return nil }
+func (t prim) Clone() TypeOp      { return t }
+func (t prim) New(...Type) TypeOp { return t }
 
 func (t prim) IsConst() bool { return true }
 
@@ -159,7 +161,7 @@ func Example_greenspun() {
 
 	fmt.Printf("Type: %v | err: %v", t, err)
 
-	// Outputs
+	// Outputs:
 	// Type: Float | err: <nil>
 
 }

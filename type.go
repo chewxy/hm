@@ -8,8 +8,11 @@ import "fmt"
 //		- TypeConst
 type Type interface {
 	Name() string
-	Contains(tv TypeVariable) bool
+	Contains(tv *TypeVariable) bool
 	Eq(Type) bool
+
+	// Prune replaces any type variable with the
+	Prune() Type
 
 	fmt.Formatter
 	fmt.Stringer
@@ -21,9 +24,10 @@ type TypeOp interface {
 	Types() Types
 
 	Clone() TypeOp
+	New(...Type) TypeOp
 
 	// Replaces all the instances of tv with t. If your data structure is recursive, it needs to be replaced for the entire data structure
-	Replace(a, b Type) TypeOp
+	// Replace(a, b Type) TypeOp
 }
 
 // TypeConst is a constant type. Replace() will not change the TypeOp. It's useful for implementing atomic types. Formerly called Atomic

@@ -11,13 +11,10 @@ type Env interface {
 	Add(id string, t Type) Env
 
 	// AddSpecified adds a TypeVariable to the set of specified type variables
-	AddConcreteVar(tv TypeVariable) Env
-
-	// AddReplacements adds a replacement
-	AddReplacement(map[TypeVariable]Type) Env
+	AddConcreteVar(tv *TypeVariable) Env
 
 	// Replacements returns the set of replacements
-	Replacements() map[TypeVariable]Type
+	Replacements() map[*TypeVariable]Type
 
 	// Specified is a set of TypeVariables that have been specified
 	ConcreteVars() Types
@@ -49,14 +46,14 @@ type SimpleEnv struct {
 	m map[string]Type
 	s Types
 
-	r map[TypeVariable]Type
+	r map[*TypeVariable]Type
 }
 
 // NewSimpleEnv creates a *SimpleEnv
 func NewSimpleEnv(opts ...SimpleEnvConsOpt) *SimpleEnv {
 	env := &SimpleEnv{
 		m: make(map[string]Type),
-		r: make(map[TypeVariable]Type),
+		r: make(map[*TypeVariable]Type),
 	}
 
 	for _, opt := range opts {
@@ -79,19 +76,12 @@ func (env *SimpleEnv) Add(id string, t Type) Env {
 	return env
 }
 
-func (env *SimpleEnv) AddConcreteVar(tv TypeVariable) Env {
+func (env *SimpleEnv) AddConcreteVar(tv *TypeVariable) Env {
 	env.s = env.s.Add(tv)
 	return env
 }
 
-func (env *SimpleEnv) AddReplacement(r map[TypeVariable]Type) Env {
-	for k, v := range r {
-		env.r[k] = v
-	}
-	return env
-}
-
-func (env *SimpleEnv) Replacements() map[TypeVariable]Type {
+func (env *SimpleEnv) Replacements() map[*TypeVariable]Type {
 	return env.r
 }
 
@@ -105,7 +95,7 @@ func (env *SimpleEnv) Clone() Env {
 		m[k] = v
 	}
 
-	r := make(map[TypeVariable]Type)
+	r := make(map[*TypeVariable]Type)
 	for k, v := range env.r {
 		r[k] = v
 	}
@@ -134,7 +124,7 @@ func (env *SimpleEnv) fresh(t Type) (freshType Type) {
 	defer leaveLoggingContext()
 
 	switch p := Prune(t).(type) {
-	case TypeVariable:
+	case *TypeVariable:
 		if env.s.Contains(p) {
 			return p
 		}
@@ -150,21 +140,17 @@ func (env *SimpleEnv) fresh(t Type) (freshType Type) {
 		return p.Clone()
 	case TypeOp:
 		pts := p.Types()
-
-		for i := 0; i < len(pts); i++ {
-			tt := pts[i]
-
-			var tt2 Type
-			tt2 = env.fresh(tt)
-
-			if tv, ok := tt.(TypeVariable); ok {
-				p = p.Replace(tv, tt2)
-				pts = p.Types()
-			}
-
+		if len(pts) == 1 {
+			defer ReturnTypes1(pts)
 		}
 
-		return p
+		ts := make(Types, len(pts))
+		for i, tt := range pts {
+			ts[i] = env.fresh(tt)
+		}
+
+		return p.New(ts...)
+
 	default:
 		panic("Not implemented yet")
 	}
@@ -270,41 +256,32 @@ func Infer(node Node, env Env) (retVal Type, err error) {
 		if arg, err = Infer(n.Body(), env); err != nil {
 			return
 		}
-		retType := NewTypeVar(randomStr(5))
+		retVal = NewTypeVar(randomStr(5))
 
-		fn := NewFnType(arg, retType)
+		fn := NewFnType(arg, retVal)
 
-		var t0 Type
-		var r map[TypeVariable]Type
-		if t0, _, r, err = Unify(fn, fnType); err != nil {
+		if _, _, err = Unify(fn, fnType); err != nil {
 			return
 		}
 
-		env = env.AddReplacement(r)
-		fn = t0.(*FunctionType)
-		for k, v := range r {
-			fn = fn.Replace(k, v).(*FunctionType)
-		}
+		retVal = Prune(retVal)
 
-		retVal = fn.ts[1]
 	case LetRec:
 		var tmp Type
 		tmp = NewTypeVar(randomStr(5))
 		scope := env.Clone()
 		scope = scope.Add(n.Name(), tmp)
-		scope = scope.AddConcreteVar(tmp.(TypeVariable))
+		scope = scope.AddConcreteVar(tmp.(*TypeVariable))
 
 		var def Type
 		if def, err = Infer(n.Def(), scope); err != nil {
 			return
 		}
 
-		var r map[TypeVariable]Type
-		if tmp, _, r, err = Unify(tmp, def); err != nil {
+		if _, _, err = Unify(tmp, def); err != nil {
 			return
 		}
 
-		env = env.AddReplacement(r)
 		scope = scope.Add(n.Name(), tmp)
 		return Infer(n.Body(), scope)
 

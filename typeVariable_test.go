@@ -9,12 +9,15 @@ import (
 
 var tvEq = []struct {
 	name string
-	a    TypeVariable
+	a    *TypeVariable
 	b    Type
 
 	equal bool
 }{
-	{"empty == empty", TypeVariable{}, TypeVariable{}, true},
+	{"empty == empty (0)", &TypeVariable{}, &TypeVariable{}, true},
+	{"empty == empty (1)", nil, nil, true},
+	{"empty == empty (2)", &TypeVariable{}, nil, true},
+	{"a == empty(nil)", NewTypeVar("a"), nil, false},
 	{"a == a", NewTypeVar("a"), NewTypeVar("a"), true},
 	{"a == b", NewTypeVar("a"), NewTypeVar("b"), false},
 	{"a == proton", NewTypeVar("a"), proton, false},
@@ -26,24 +29,26 @@ var tvEq = []struct {
 
 var tvContains = []struct {
 	name string
-	a, b TypeVariable
+	a, b *TypeVariable
 
 	contains bool
 }{
-	{"empty <: empty", TypeVariable{}, TypeVariable{}, true},
-	{"empty <: a", TypeVariable{}, NewTypeVar("a"), false},
+	{"empty <: empty", &TypeVariable{}, &TypeVariable{}, true},
+	{"empty <: a", &TypeVariable{}, NewTypeVar("a"), false},
 	{"a <: a", NewTypeVar("a"), NewTypeVar("a"), true},
 	{"a:proton <: a:proton", NewTypeVar("a", WithInstance(proton)), NewTypeVar("a", WithInstance(proton)), true},
 	{"a <: a:proton", NewTypeVar("a"), NewTypeVar("a", WithInstance(proton)), false},
+
+	// nil tests
 }
 
 var tvStrings = []struct {
 	name string
-	a    TypeVariable
+	a    *TypeVariable
 	s    string
 	v    string
 }{
-	{"empty", TypeVariable{}, "''", "'':<nil>"},
+	{"empty", &TypeVariable{}, "''", "'':<nil>"},
 	{"a", NewTypeVar("a"), "a", "a:<nil>"},
 	{"a:proton", NewTypeVar("a", WithInstance(proton)), "proton", "a:proton"},
 	{"a:b:proton", NewTypeVar("a", WithInstance(NewTypeVar("b", WithInstance(proton)))), "proton", "a:b:proton"},
@@ -52,7 +57,7 @@ var tvStrings = []struct {
 func TestTypeVariableBasics(t *testing.T) {
 	assert := assert.New(t)
 
-	var tv0, tv1 TypeVariable
+	var tv0, tv1 *TypeVariable
 	var t0, t1 Type
 	t.Log("Empty Type Variable")
 	if ok := tv0.IsEmpty(); !ok {
@@ -76,7 +81,7 @@ func TestTypeVariableBasics(t *testing.T) {
 	fail := func() {
 		tv0.Eq(tv1)
 	}
-	assert.Panics(fail)
+	assert.Panics(fail, "same name but different instances panic expected")
 
 	t.Log("Contains")
 	for _, tvcs := range tvContains {
@@ -111,7 +116,7 @@ func TestTypeVariableBasics(t *testing.T) {
 
 	t.Log("TypeVar Instance (for completeness sake")
 	t0 = NewTypeVar("a", WithInstance(proton))
-	assert.Equal(proton, t0.(TypeVariable).Instance())
+	assert.Equal(proton, t0.(*TypeVariable).Instance(), "TypeVar instance failed")
 }
 
 func TestTVConsOpt(t *testing.T) {

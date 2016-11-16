@@ -7,6 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSimpleEnvBasicst(t *testing.T) {
+
+}
+
 func TestSimpleEnv_Fresh(t *testing.T) {
 	assert := assert.New(t)
 	var fresh Type
@@ -28,6 +32,7 @@ func TestSimpleEnv_Fresh(t *testing.T) {
 		NewTypeVar("a"),
 	}
 	env = NewSimpleEnv(WithDict(m), WithConcreteVars(concrete))
+	assert.Equal(concrete, env.ConcreteVars())
 
 	t0 = NewTypeVar("a")
 	assert.Equal(t0, env.Fresh(t0))
@@ -65,9 +70,11 @@ func TestInfer(t *testing.T) {
 	var t0 Type
 	var err error
 
+	p1a := NewTypeVar("a")
+	pa := NewTypeVar("a")
 	m := map[string]Type{
-		"+":  NewFnType(NewTypeVar("a"), NewFnType(NewTypeVar("a"), NewTypeVar("a"))),
-		"+1": NewFnType(NewTypeVar("a"), NewTypeVar("a")),
+		"+":  NewFnType(pa, pa, pa),
+		"+1": NewFnType(p1a, p1a),
 	}
 	for _, its := range infer1 {
 		env := NewSimpleEnv(WithDict(m))

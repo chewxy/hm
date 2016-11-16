@@ -17,7 +17,7 @@ const (
 	higgs
 )
 
-func (t particle) Contains(tv TypeVariable) bool { return false }
+func (t particle) Contains(tv *TypeVariable) bool { return false }
 func (t particle) Eq(other Type) bool {
 	if ta, ok := other.(particle); ok {
 		return ta == t
@@ -27,9 +27,10 @@ func (t particle) Eq(other Type) bool {
 
 func (t particle) Name() string                   { return t.String() }
 func (t particle) Format(state fmt.State, c rune) { fmt.Fprintf(state, t.String()) }
+func (t particle) Prune() Type                    { return t }
 func (t particle) Types() Types                   { return nil }
 func (t particle) Clone() TypeOp                  { return t }
-func (t particle) Replace(Type, Type) TypeOp      { return t }
+func (t particle) New(...Type) TypeOp             { return t }
 func (t particle) IsConstant() bool               { return true }
 func (t particle) String() string {
 	switch t {
@@ -59,8 +60,8 @@ type list struct {
 	t Type
 }
 
-func (t list) Contains(tv TypeVariable) bool {
-	ttv, ok := t.t.(TypeVariable)
+func (t list) Contains(tv *TypeVariable) bool {
+	ttv, ok := t.t.(*TypeVariable)
 	if !ok {
 		return false
 	}
@@ -82,7 +83,7 @@ func (t list) Types() Types                   { return Types{t.t} }
 func (t list) Clone() TypeOp {
 	retVal := list{}
 	switch tt := t.t.(type) {
-	case TypeVariable:
+	case *TypeVariable:
 		retVal.t = tt
 	case TypeOp:
 		retVal.t = tt.Clone()
@@ -90,22 +91,17 @@ func (t list) Clone() TypeOp {
 	return retVal
 }
 
-func (t list) Replace(what, with Type) TypeOp {
-	switch tt := t.t.(type) {
-	case TypeVariable:
-		if tt.Eq(what) {
-			t.t = with
-		}
-	case TypeConst:
-		// do nothing
-	case TypeOp:
-		if tt.Eq(what) {
-			t.t = with
-		} else {
-			t.t = tt.Replace(what, with)
-		}
-	default:
-		panic("WTF")
+func (t list) New(ts ...Type) TypeOp {
+	if len(ts) != 1 {
+		panic("Expected only one parameter")
+	}
+
+	return list{ts[0]}
+}
+
+func (t list) Prune() Type {
+	if tv, ok := t.t.(*TypeVariable); ok {
+		t.t = Prune(tv)
 	}
 	return t
 }
@@ -115,8 +111,8 @@ type mirrorUniverseList struct {
 	t Type
 }
 
-func (t mirrorUniverseList) Contains(tv TypeVariable) bool {
-	ttv, ok := t.t.(TypeVariable)
+func (t mirrorUniverseList) Contains(tv *TypeVariable) bool {
+	ttv, ok := t.t.(*TypeVariable)
 	if !ok {
 		return false
 	}
@@ -138,7 +134,7 @@ func (t mirrorUniverseList) Types() Types                   { return Types{t.t} 
 func (t mirrorUniverseList) Clone() TypeOp {
 	retVal := list{}
 	switch tt := t.t.(type) {
-	case TypeVariable:
+	case *TypeVariable:
 		retVal.t = tt
 	case TypeOp:
 		retVal.t = tt.Clone()
@@ -146,22 +142,17 @@ func (t mirrorUniverseList) Clone() TypeOp {
 	return retVal
 }
 
-func (t mirrorUniverseList) Replace(what, with Type) TypeOp {
-	switch tt := t.t.(type) {
-	case TypeVariable:
-		if tt.Eq(what) {
-			t.t = with
-		}
-	case TypeConst:
-		// do nothing
-	case TypeOp:
-		if tt.Eq(what) {
-			t.t = with
-		} else {
-			t.t = tt.Replace(what, with)
-		}
-	default:
-		panic("WTF")
+func (t mirrorUniverseList) New(ts ...Type) TypeOp {
+	if len(ts) != 1 {
+		panic("Expected only one parameter")
+	}
+
+	return mirrorUniverseList{ts[0]}
+}
+
+func (t mirrorUniverseList) Prune() Type {
+	if tv, ok := t.t.(*TypeVariable); ok {
+		t.t = Prune(tv)
 	}
 	return t
 }
@@ -170,10 +161,11 @@ func (t mirrorUniverseList) Replace(what, with Type) TypeOp {
 type malformed struct{}
 
 func (t malformed) Name() string                   { return "malformed" }
-func (t malformed) Contains(tv TypeVariable) bool  { return false }
+func (t malformed) Contains(tv *TypeVariable) bool { return false }
 func (t malformed) Eq(other Type) bool             { return false }
 func (t malformed) Format(state fmt.State, c rune) { fmt.Fprintf(state, "malformed") }
 func (t malformed) String() string                 { return "malformed" }
+func (t malformed) Prune() Type                    { return t }
 
 func typeEqAnyVar(a, b Type) bool {
 	switch at := a.(type) {
@@ -188,8 +180,8 @@ func typeEqAnyVar(a, b Type) bool {
 			return true
 		}
 		return false
-	case TypeVariable:
-		if bt, ok := b.(TypeVariable); ok {
+	case *TypeVariable:
+		if bt, ok := b.(*TypeVariable); ok {
 			if at.name == "∀" || bt.name == "∀" {
 				return true
 			}

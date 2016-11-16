@@ -23,33 +23,31 @@ import "github.com/pkg/errors"
 //		 a ~ T : [a/T]
 //
 // The more complicated constructor unification and arrow unification isn't quite covered yet.
-func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Type, err error) {
+func Unify(t1, t2 Type) (retVal1, retVal2 Type, err error) {
+	logf("Unifying %v and %v", t1, t2)
+	enterLoggingContext()
+	defer leaveLoggingContext()
+
 	a := Prune(t1)
 	b := Prune(t2)
 
 	switch at := a.(type) {
-	case TypeVariable:
-		if retVal1, retVal2, err = UnifyVar(at, b); err != nil {
+	case *TypeVariable:
+		if err = UnifyVar(at, b); err != nil {
 			return
 		}
-		if replacements == nil {
-			replacements = make(map[TypeVariable]Type)
-		}
+		retVal1 = at
+		retVal2 = b
 
-		replacements[at] = retVal1
 	case TypeOp:
 		switch bt := b.(type) {
-		case TypeVariable:
+		case *TypeVariable:
 			// note the order change
-			if retVal2, retVal1, err = UnifyVar(bt, at); err != nil {
+			if err = UnifyVar(bt, at); err != nil {
 				return
 			}
-
-			if replacements == nil {
-				replacements = make(map[TypeVariable]Type)
-			}
-
-			replacements[bt] = retVal2
+			retVal1 = at
+			retVal2 = bt
 		case TypeOp:
 			atypes := at.Types()
 			btypes := bt.Types()
@@ -58,51 +56,33 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Ty
 				return
 			}
 
-			var t_a, t_b Type
-			for i := 0; i < len(atypes); i++ {
-				t_a = atypes[i]
-				t_b = btypes[i]
+			if len(atypes) == 1 {
+				defer ReturnTypes1(atypes)
+			}
+			if len(btypes) == 1 {
+				defer ReturnTypes1(btypes)
+			}
 
-				var t_a2, t_b2 Type
-				var r2 map[TypeVariable]Type
-				if t_a2, t_b2, r2, err = Unify(t_a, t_b); err != nil {
+			for i, att := range atypes {
+				logf("att: %#v btt: %#v", att, btypes[i])
+				att = att.Prune()
+				btt := btypes[i].Prune()
+				logf("PRUNED att: %#v btt: %#v", att, btypes[i])
+				if att, btt, err = Unify(att, btt); err != nil {
 					return
 				}
 
-				if replacements == nil {
-					replacements = r2
-				} else {
-					for k, v := range r2 {
-						replacements[k] = v
-					}
-				}
+				logf("i: %v att %#v, btt %#v", i, att, btt)
+				logf("aty %v bty %v", atypes, btypes)
+				atypes[i] = att.Prune()
+				btypes[i] = btt.Prune()
+				logf("PRUNED2: %v %v", atypes[i], btypes[i])
+				logf("aty %v bty %v", atypes, btypes)
 
-				pt_a2 := Prune(t_a2)
-				pt_b2 := Prune(t_b2)
-
-				at = at.Replace(t_a, pt_a2)
-				bt = bt.Replace(t_b, pt_b2)
-
-				for k, v := range replacements {
-					at = at.Replace(k, v)
-					bt = bt.Replace(k, v)
-				}
-
-				if tv, ok := t_a.(TypeVariable); ok {
-					replacements[tv] = pt_a2
-				}
-
-				if tv, ok := t_b.(TypeVariable); ok {
-					replacements[tv] = pt_b2
-				}
-
-				atypes = at.Types()
-				btypes = bt.Types()
 			}
 
-			retVal1 = at
-			retVal2 = bt
-			return
+			retVal1 = at.New(atypes...)
+			retVal2 = bt.New(btypes...)
 		default:
 			err = errors.Errorf(nyi, "Unify of TypeOp ", b, b)
 			return
@@ -116,46 +96,46 @@ func Unify(t1, t2 Type) (retVal1, retVal2 Type, replacements map[TypeVariable]Ty
 }
 
 // UnifyVar unifies a TypeVariable and a Type.
-func UnifyVar(tv TypeVariable, t Type) (ret1, ret2 Type, err error) {
+func UnifyVar(tv *TypeVariable, t Type) (err error) {
+	logf("Unifying var %v and %v", tv, t)
+	enterLoggingContext()
+	defer leaveLoggingContext()
+
 	if tv.IsEmpty() {
-		err = errors.Errorf(undefinedTV)
-		return
+		return errors.Errorf(undefinedTV)
 	}
-	ret1 = tv
-	ret2 = t
-	var unioned *TypeClassSet
-	if ttv, ok := t.(TypeVariable); ok {
+
+	if ttv, ok := t.(*TypeVariable); ok {
 		if ttv.IsEmpty() {
-			return
+			return nil
 		}
 
-		if t.Eq(ttv) {
-			if tv.constraints == nil {
-			}
-			unioned = tv.constraints.Union(ttv.constraints)
-
-			tv.constraints = unioned
+		if !tv.Eq(ttv) {
+			unioned := tv.constraints.Union(ttv.constraints)
 			ttv.constraints = unioned
-			ret2 = ttv
+			tv.constraints = unioned
+			goto setinstance
+		} else {
+			return errors.Errorf(recursiveUnification, tv, ttv)
 		}
-
 	}
 
-	if ret2.Contains(tv) {
-		err = errors.Errorf(recursiveUnification, tv, t)
-		return
+	if t.Contains(tv) {
+		return errors.Errorf(recursiveUnification, tv, t)
 	}
 
-	tv.instance = ret2
-	ret1 = tv
-	return
+setinstance:
+	tv.instance = t
+	return nil
 }
 
 // Prune returns the defining instance of T
 func Prune(t Type) Type {
-	if tv, ok := t.(TypeVariable); ok {
+	if tv, ok := t.(*TypeVariable); ok {
+		logf("Is TV")
 		if tv.instance != nil {
-			return Prune(tv.instance)
+			tv.instance = Prune(tv.instance)
+			return tv.instance
 		}
 	}
 	return t

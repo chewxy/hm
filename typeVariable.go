@@ -30,21 +30,20 @@ func WithConstraints(cs ...TypeClass) TypeVarConsOpt {
 }
 
 // NewTypeVar creates a new TypeVariable
-func NewTypeVar(name string, opts ...TypeVarConsOpt) TypeVariable {
-	retVal := TypeVariable{
-		name: name,
-	}
+func NewTypeVar(name string, opts ...TypeVarConsOpt) *TypeVariable {
+	retVal := borrowTypeVar()
+	retVal.name = name
 
 	for _, opt := range opts {
-		opt(&retVal)
+		opt(retVal)
 	}
 
 	return retVal
 }
 
-func (t TypeVariable) Name() string { return t.name }
+func (t *TypeVariable) Name() string { return t.name }
 
-func (t TypeVariable) Contains(tv TypeVariable) bool {
+func (t *TypeVariable) Contains(tv *TypeVariable) bool {
 	if t.Eq(tv) {
 		return true
 	}
@@ -52,14 +51,24 @@ func (t TypeVariable) Contains(tv TypeVariable) bool {
 	return false
 }
 
-func (t TypeVariable) Eq(other Type) bool {
-	var tv TypeVariable
-	var ok bool
-	if tv, ok = other.(TypeVariable); !ok {
+func (t *TypeVariable) Eq(other Type) bool {
+	if other == nil {
+		if t.IsEmpty() {
+			return true
+		}
 		return false
 	}
 
-	if t.name != tv.name {
+	var tv *TypeVariable
+	var ok bool
+	if tv, ok = other.(*TypeVariable); !ok {
+		return false
+	}
+
+	switch {
+	case tv == t, tv == nil && t == nil:
+		return true
+	case t.name != tv.name:
 		return false
 	}
 
@@ -77,7 +86,7 @@ func (t TypeVariable) Eq(other Type) bool {
 
 }
 
-func (t TypeVariable) Format(state fmt.State, c rune) {
+func (t *TypeVariable) Format(state fmt.State, c rune) {
 	if t.instance == nil {
 		name := "''"
 		if t.name != "" {
@@ -99,7 +108,7 @@ func (t TypeVariable) Format(state fmt.State, c rune) {
 	}
 }
 
-func (t TypeVariable) String() string {
+func (t *TypeVariable) String() string {
 	if t.instance != nil {
 		return t.instance.String()
 	}
@@ -109,10 +118,14 @@ func (t TypeVariable) String() string {
 	return t.name
 }
 
+func (t *TypeVariable) Prune() Type {
+	return Prune(t)
+}
+
 // IsEmpty returns true if it's a dummy/empty type variable - defined as a TypeVariable with no name, and no constraints nor instances
-func (t TypeVariable) IsEmpty() bool {
-	return t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints.s) == 0)
+func (t *TypeVariable) IsEmpty() bool {
+	return t == nil || (t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints.s) == 0))
 }
 
 // Instance returns the instance that defines the TypeVariable
-func (t TypeVariable) Instance() Type { return t.instance }
+func (t *TypeVariable) Instance() Type { return t.instance }
