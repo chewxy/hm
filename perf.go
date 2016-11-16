@@ -13,7 +13,9 @@ var (
 )
 
 func init() {
-
+	// fntypePool.New = func() interface{} { return new(FunctionType) }
+	// types1Pool.New = func() interface{} { return make(Types, 1, 1) }
+	// typeVarPool.New = func() interface{} { return new(TypeVariable) }
 }
 
 // DontUseFnPool ensures that the pool won't be used
@@ -42,6 +44,8 @@ func UseTvPool() { tvPoolGuard.Lock(); tvPool = true; tvPoolGuard.Unlock() }
 
 // IsUsingTvPool returns whether the pool for *TypeVariable is being used
 func IsUsingTvPool() bool { return tvPool }
+
+// var fntypePool = new(sync.Pool)
 
 var fntypePool = &sync.Pool{
 	New: func() interface{} { return new(FunctionType) },
@@ -79,9 +83,12 @@ func ReturnFnType(t *FunctionType) {
 }
 
 // pool for Types with size of 1
+
 var types1Pool = &sync.Pool{
 	New: func() interface{} { return make(Types, 1, 1) },
 }
+
+// var types1Pool = new(sync.Pool)
 
 func BorrowTypes1() Types {
 	return types1Pool.Get().(Types)
@@ -94,6 +101,8 @@ func ReturnTypes1(ts Types) {
 
 // pool for typevar
 // we also keep track of the used TypeVariables
+
+// var typeVarPool = new(sync.Pool)
 
 var typeVarPool = &sync.Pool{
 	New: func() interface{} { return new(TypeVariable) },
