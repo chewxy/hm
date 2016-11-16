@@ -10,13 +10,12 @@ import (
 )
 
 //TypeClassSet is a set of TypeClass
-type TypeClassSet struct {
-	s []TypeClass
-}
+type TypeClassSet []TypeClass
 
 // NewTypeClassSet creates a new set of TypeClass, given an input of any TypeClass
-func NewTypeClassSet(a ...TypeClass) *TypeClassSet {
-	set := new(TypeClassSet)
+func NewTypeClassSet(a ...TypeClass) TypeClassSet {
+	var set TypeClassSet
+
 	for _, v := range a {
 		set = set.Add(v)
 	}
@@ -25,12 +24,12 @@ func NewTypeClassSet(a ...TypeClass) *TypeClassSet {
 }
 
 // ToSlice returns the elements of the current set as a slice
-func (set *TypeClassSet) ToSlice() []TypeClass {
-	return set.s
+func (set TypeClassSet) ToSlice() []TypeClass {
+	return []TypeClass(set)
 }
 
 // ContainsALl determines if all the wanted items are already in set
-func (set *TypeClassSet) ContainsAll(ws ...TypeClass) bool {
+func (set TypeClassSet) ContainsAll(ws ...TypeClass) bool {
 	for _, w := range ws {
 		if !set.Contains(w) {
 			return false
@@ -40,21 +39,21 @@ func (set *TypeClassSet) ContainsAll(ws ...TypeClass) bool {
 }
 
 // Add adds an item into the set, and then returns a new set. If the item already exists, it returns the current set
-func (set *TypeClassSet) Add(item TypeClass) *TypeClassSet {
+func (set TypeClassSet) Add(item TypeClass) TypeClassSet {
 	if set.Contains(item) {
 		return set
 	}
-	set.s = append(set.s, item)
+	set = append(set, item)
 	return set
 }
 
 // IsSubSetOf checks if the current set is a subset of the other set.
-func (set *TypeClassSet) IsSubsetOf(other *TypeClassSet) bool {
-	if len(set.s) > len(other.s) {
+func (set TypeClassSet) IsSubsetOf(other TypeClassSet) bool {
+	if len(set) > len(other) {
 		return false
 	}
 
-	for _, v := range set.s {
+	for _, v := range set {
 		if !other.Contains(v) {
 			return false
 		}
@@ -64,21 +63,20 @@ func (set *TypeClassSet) IsSubsetOf(other *TypeClassSet) bool {
 }
 
 // IsSupersetOf checks if the current set is a superset of the other set
-func (set *TypeClassSet) IsSupersetOf(other *TypeClassSet) bool {
+func (set TypeClassSet) IsSupersetOf(other TypeClassSet) bool {
 	return other.IsSubsetOf(set)
 }
 
 // Intersect performs an intersection between two sets - only items that exist in both are returned
-func (set *TypeClassSet) Intersect(other *TypeClassSet) *TypeClassSet {
+func (set TypeClassSet) Intersect(other TypeClassSet) TypeClassSet {
 	switch {
-	case set == nil || other == nil || len(set.s) == 0 || len(other.s) == 0:
+	case len(set) == 0 || len(other) == 0:
 		return nil
 	default:
-		retVal := new(TypeClassSet)
-		retVal.s = make([]TypeClass, 0)
-		for _, o := range other.s {
+		retVal := make(TypeClassSet, 0)
+		for _, o := range other {
 			if set.Contains(o) {
-				retVal.s = append(retVal.s, o)
+				retVal = append(retVal, o)
 			}
 		}
 		return retVal
@@ -86,24 +84,20 @@ func (set *TypeClassSet) Intersect(other *TypeClassSet) *TypeClassSet {
 }
 
 //Union joins both sets together, keeping only unique items
-func (set *TypeClassSet) Union(other *TypeClassSet) *TypeClassSet {
-	setIsEmpty := set == nil || len(set.s) == 0
-	otherIsEmpty := other == nil || len(other.s) == 0
-
+func (set TypeClassSet) Union(other TypeClassSet) TypeClassSet {
 	switch {
-	case setIsEmpty && otherIsEmpty:
+	case len(set) == 0 && len(other) == 0:
 		return nil
-	case setIsEmpty && !otherIsEmpty:
+	case len(set) == 0 && len(other) > 0:
 		return other
-	case !setIsEmpty && otherIsEmpty:
+	case len(set) > 0 && len(other) == 0:
 		return set
 	default:
-		retVal := new(TypeClassSet)
-		retVal.s = make([]TypeClass, len(set.s))
-		copy(retVal.s, set.s)
-		for _, o := range other.s {
+		retVal := make(TypeClassSet, len(set))
+		copy(retVal, set)
+		for _, o := range other {
 			if !retVal.Contains(o) {
-				retVal.s = append(retVal.s, o)
+				retVal = append(retVal, o)
 			}
 		}
 		return retVal
@@ -112,34 +106,29 @@ func (set *TypeClassSet) Union(other *TypeClassSet) *TypeClassSet {
 
 // Difference returns a new set with items in the current set but not in the other set.
 // Equivalent to  (set - other)
-func (set *TypeClassSet) Difference(other *TypeClassSet) (retVal *TypeClassSet) {
-	retVal = new(TypeClassSet)
-	for _, v := range set.s {
+func (set TypeClassSet) Difference(other TypeClassSet) (retVal TypeClassSet) {
+	for _, v := range set {
 		if !other.Contains(v) {
-			retVal.s = append(retVal.s, v)
+			retVal = append(retVal, v)
 		}
 	}
 	return retVal
 }
 
 // SymmetricDifference is the set of items that is not in each either set.
-func (set *TypeClassSet) SymmetricDifference(other *TypeClassSet) *TypeClassSet {
+func (set TypeClassSet) SymmetricDifference(other TypeClassSet) TypeClassSet {
 	aDiff := set.Difference(other)
 	bDiff := other.Difference(set)
 	return aDiff.Union(bDiff)
 }
 
 // Equals compares two sets and checks if it is the same
-func (set *TypeClassSet) Equals(other *TypeClassSet) bool {
-	if set == other {
-		return true
-	}
-
-	if len(set.s) != len(other.s) {
+func (set TypeClassSet) Equals(other TypeClassSet) bool {
+	if len(set) != len(other) {
 		return false
 	}
 
-	for _, v := range set.s {
+	for _, v := range set {
 		if !other.Contains(v) {
 			return false
 		}
@@ -149,11 +138,11 @@ func (set *TypeClassSet) Equals(other *TypeClassSet) bool {
 }
 
 // String for stuff
-func (set *TypeClassSet) String() string {
+func (set TypeClassSet) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("TypeClassSet[")
-	for i, v := range set.s {
-		if i == len(set.s)-1 {
+	for i, v := range set {
+		if i == len(set)-1 {
 			fmt.Fprintf(&buf, "%v", v)
 		} else {
 			fmt.Fprintf(&buf, "%v, ", v)
@@ -164,8 +153,8 @@ func (set *TypeClassSet) String() string {
 }
 
 // Contains determines if an item is in the set already
-func (set *TypeClassSet) Contains(w TypeClass) bool {
-	for _, v := range set.s {
+func (set TypeClassSet) Contains(w TypeClass) bool {
+	for _, v := range set {
 		if v == w {
 			return true
 		}

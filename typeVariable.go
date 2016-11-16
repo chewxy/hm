@@ -7,7 +7,7 @@ type TypeVariable struct {
 	name     string
 	instance Type
 
-	constraints *TypeClassSet
+	constraints TypeClassSet
 }
 
 type TypeVarConsOpt func(tv *TypeVariable)
@@ -21,10 +21,9 @@ func WithInstance(t Type) TypeVarConsOpt {
 }
 
 // WithConstraints is an option that creates a TypeVariable with a type class constraints
-func WithConstraints(cs ...TypeClass) TypeVarConsOpt {
+func WithConstraints(constraints ...TypeClass) TypeVarConsOpt {
 	f := func(tv *TypeVariable) {
-		constraints := NewTypeClassSet(cs...)
-		tv.constraints = constraints
+		tv.constraints = TypeClassSet(constraints)
 	}
 	return f
 }
@@ -124,7 +123,7 @@ func (t *TypeVariable) Prune() Type {
 
 // IsEmpty returns true if it's a dummy/empty type variable - defined as a TypeVariable with no name, and no constraints nor instances
 func (t *TypeVariable) IsEmpty() bool {
-	return t == nil || (t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints.s) == 0))
+	return t == nil || (t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints) == 0))
 }
 
 // Instance returns the instance that defines the TypeVariable
