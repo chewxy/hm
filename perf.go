@@ -2,147 +2,127 @@ package hm
 
 import "sync"
 
-var (
-	fnPool = true
-	tsPool = true
-	tvPool = true
+const poolSize = 4
 
-	fnPoolGuard = new(sync.Mutex)
-	tsPoolGuard = new(sync.Mutex)
-	tvPoolGuard = new(sync.Mutex)
-)
-
-func init() {
-	// fntypePool.New = func() interface{} { return new(FunctionType) }
-	// types1Pool.New = func() interface{} { return make(Types, 1, 1) }
-	// typeVarPool.New = func() interface{} { return new(TypeVariable) }
+var sSubPool = [poolSize]*sync.Pool{
+	&sync.Pool{
+		New: func() interface{} { return make(sSubs, 1) },
+	},
+	&sync.Pool{
+		New: func() interface{} { return make(sSubs, 2) },
+	},
+	&sync.Pool{
+		New: func() interface{} { return make(sSubs, 3) },
+	},
+	&sync.Pool{
+		New: func() interface{} { return make(sSubs, 4) },
+	},
 }
 
-// DontUseFnPool ensures that the pool won't be used
-func DontUseFnPool() { fnPoolGuard.Lock(); fnPool = false; fnPoolGuard.Unlock() }
-
-// UseFnPool ensures that the pool for *FunctionType will be used
-func UseFnPool() { fnPoolGuard.Lock(); fnPool = true; fnPoolGuard.Unlock() }
-
-// IsUsingFnPool returns whether the *FunctionType pool is being used
-func IsUsingFnPool() bool { return fnPool }
-
-// DontUseTsPool ensures that the Types pool for sizes 1 won't be used
-func DontUseTsPool() { tsPoolGuard.Lock(); tsPool = false; tsPoolGuard.Unlock() }
-
-// UseFnPool ensures that the pool for Types with size 1 will be used
-func UseTsPool() { tsPoolGuard.Lock(); tsPool = true; tsPoolGuard.Unlock() }
-
-// IsUsingTsPool returns whether the pool for Types with size 1 is being used
-func IsUsingTsPool() bool { return tsPool }
-
-// DontUseTvPool ensures that the pool for *TypeVariable won't be used
-func DontUseTvPool() { tvPoolGuard.Lock(); tvPool = false; tvPoolGuard.Unlock() }
-
-// UseFnPool ensures that the pool for *TypeVariable will be used
-func UseTvPool() { tvPoolGuard.Lock(); tvPool = true; tvPoolGuard.Unlock() }
-
-// IsUsingTvPool returns whether the pool for *TypeVariable is being used
-func IsUsingTvPool() bool { return tvPool }
-
-// var fntypePool = new(sync.Pool)
-
-var fntypePool = &sync.Pool{
-	New: func() interface{} { return new(FunctionType) },
+var mSubPool = &sync.Pool{
+	New: func() interface{} { return make(mSubs) },
 }
 
-func borrowFnType() *FunctionType {
-	return fntypePool.Get().(*FunctionType)
-}
+func ReturnSubs(sub Subs) {
+	switch s := sub.(type) {
+	case mSubs:
+		for k := range s {
+			delete(s, k)
+		}
+		mSubPool.Put(sub)
+	case sSubs:
+		size := cap(s)
+		s = s[:cap(s)]
+		if size > 0 && size < poolSize+1 {
+			// reset to empty
+			for i := range s {
+				s[i] = Substitution{}
+			}
 
-func ReturnFnType(t *FunctionType) {
-	logf("returning FnType")
-	enterLoggingContext()
-	defer leaveLoggingContext()
-
-	switch t0t := t.ts[0].(type) {
-	case *FunctionType:
-		ReturnFnType(t0t)
-	case *TypeVariable:
-		logf("Going to return t0t %p", t0t)
-		ReturnTypeVar(t0t)
+			sSubPool[size-1].Put(sub)
+		}
 	}
+}
 
-	switch t1t := t.ts[1].(type) {
-	case *FunctionType:
-		ReturnFnType(t1t)
-	case *TypeVariable:
-		logf("Going to return t1t %p", t1t)
-		ReturnTypeVar(t1t)
+func BorrowMSubs() mSubs {
+	return mSubPool.Get().(mSubs)
+}
+
+func BorrowSSubs(size int) sSubs {
+	if size > 0 && size < 5 {
+		retVal := sSubPool[size-1].Get().(sSubs)
+		return retVal
 	}
-
-	t.ts[0] = nil
-	t.ts[1] = nil
-
-	fntypePool.Put(t)
+	return make(sSubs, size)
 }
 
-// pool for Types with size of 1
+var typesPool = [poolSize]*sync.Pool{
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 1) },
+	},
 
-var types1Pool = &sync.Pool{
-	New: func() interface{} { return make(Types, 1, 1) },
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 2) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 3) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 4) },
+	},
 }
 
-// var types1Pool = new(sync.Pool)
-
-func BorrowTypes1() Types {
-	return types1Pool.Get().(Types)
-}
-
-func ReturnTypes1(ts Types) {
-	ts[0] = nil
-	types1Pool.Put(ts)
-}
-
-// pool for typevar
-// we also keep track of the used TypeVariables
-
-// var typeVarPool = new(sync.Pool)
-
-var typeVarPool = &sync.Pool{
-	New: func() interface{} { return new(TypeVariable) },
-}
-var typeVarLock = new(sync.Mutex)
-var usedTypeVars = make(map[*TypeVariable]struct{})
-
-func borrowTypeVar() *TypeVariable {
-	typeVarLock.Lock()
-	tv := typeVarPool.Get().(*TypeVariable)
-	usedTypeVars[tv] = struct{}{}
-	logf("borrowing tv %p %v", tv, tv)
-	typeVarLock.Unlock()
-	return tv
-}
-
-func ReturnTypeVar(tv *TypeVariable) {
-	logf("returning tv %p %v", tv, tv)
-	enterLoggingContext()
-	defer leaveLoggingContext()
-
-	typeVarLock.Lock()
-
-	if _, ok := usedTypeVars[tv]; !ok {
-		typeVarLock.Unlock()
-		return
+func BorrowTypes(size int) Types {
+	if size > 0 && size < poolSize+1 {
+		return typesPool[size-1].Get().(Types)
 	}
-	delete(usedTypeVars, tv)
-	typeVarLock.Unlock()
-
-	switch tit := tv.instance.(type) {
-	case *TypeVariable:
-		ReturnTypeVar(tit)
-	case *FunctionType:
-		ReturnFnType(tit)
-	}
-	tv.name = ""
-	tv.instance = nil
-	typeVarPool.Put(tv)
-
+	return make(Types, size)
 }
 
-// handles Returning of Values
+func ReturnTypes(ts Types) {
+	if size := cap(ts); size > 0 && size < poolSize+1 {
+		ts = ts[:cap(ts)]
+		for i := range ts {
+			ts[i] = nil
+		}
+		typesPool[size-1].Put(ts)
+	}
+}
+
+var typeVarSetPool = [poolSize]*sync.Pool{
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 1) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 2) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 3) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 4) },
+	},
+}
+
+func BorrowTypeVarSet(size int) TypeVarSet {
+	if size > 0 && size < poolSize+1 {
+		return typeVarSetPool[size-1].Get().(TypeVarSet)
+	}
+	return make(TypeVarSet, size)
+}
+
+func ReturnTypeVarSet(ts TypeVarSet) {
+	var def TypeVariable
+	if size := cap(ts); size > 0 && size < poolSize+1 {
+		ts = ts[:cap(ts)]
+		for i := range ts {
+			ts[i] = def
+		}
+		typeVarSetPool[size-1].Put(ts)
+	}
+}

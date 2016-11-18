@@ -1,132 +1,59 @@
 package hm
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var fnCloneTests []*FunctionType
-
-func init() {
-	fnCloneTests = []*FunctionType{
-		NewFnType(electron, list{photon}),
-		NewFnType(list{photon}, electron),
-		NewFnType(electron, NewTypeVar("a")),
-		NewFnType(NewTypeVar("a"), electron),
-	}
-}
-
-func TestFnBasics(t *testing.T) {
-	var t0 *FunctionType
-
-	// proton → electron
-	name := "proton → electron"
-	t0 = NewFnType(proton, electron)
-	if t0.Name() != "→" {
-		t.Error("Expected the name of a FunctionType to be \"→\"")
+func TestFunctionTypeBasics(t *testing.T) {
+	fnType := NewFnType(TypeVariable('a'), TypeVariable('a'), TypeVariable('a'))
+	if fnType.Name() != "→" {
+		t.Errorf("FunctionType should have \"→\" as a name. Got %q instead", fnType.Name())
 	}
 
-	if fmt.Sprintf("%v", t0) != name {
-		t.Errorf("Basic Format error. Got %q", fmt.Sprintf("%v", t0))
+	if fnType.String() != "a → a → a" {
+		t.Errorf("Expected \"a → a → a\". Got %q instead", fnType.String())
 	}
 
-	if fmt.Sprintf("%#v", t0) != name {
-		t.Errorf("Basic Format error. Got %q", fmt.Sprintf("%v", t0))
+	ftv := fnType.FreeTypeVar()
+	if len(ftv) != 1 {
+		t.Errorf("Expected only one free type var")
 	}
 
-	if t0.String() != name {
-		t.Errorf("Basic String error: Got %q", t0.String())
+	for _, fas := range fnApplyTests {
+		fn := fas.fn.Apply(fas.sub)
+		if fn != fas.expected {
+			t.Errorf("Expected %v. Got %v instead", fas.expected, fn)
+		}
 	}
 
-	if t0.Contains(NewTypeVar("a")) {
-		t.Error("A Function Type that has no type variables shouldn't contain type variables")
-	}
-
-	// a → b → electron
-	t0 = NewFnType(NewTypeVar("a"), NewTypeVar("b"), electron)
-	if !t0.Contains(NewTypeVar("a")) {
-		t.Errorf("Expected %v to contain Type Var `a`", t0)
-	}
-
-	if !t0.Contains(NewTypeVar("b")) {
-		t.Errorf("Expected %v to contain Type Var `b`", t0)
-	}
-
-	if t0.Contains(NewTypeVar("c")) {
-		t.Errorf("%v shouldn't contain Type Var `c`", t0)
-	}
-
-	correct := Types{
-		NewTypeVar("a"),
-		NewFnType(NewTypeVar("b"), electron),
-	}
-	assert.EqualValues(t, correct, t0.Types())
-
-	// equalities
-	t1 := new(FunctionType)
-	t1.ts[0] = correct[0]
-	t1.ts[1] = correct[1]
-
-	if !t0.Eq(t1) {
-		t.Error("Expected them to be the same")
-	}
-
-	t1.ts[1] = electron
-	if t0.Eq(t1) {
-		t.Error("%v should not be equal to %v", t0, t1)
-	}
-
+	// bad shit
 	f := func() {
-		NewFnType(proton)
+		NewFnType(TypeVariable('a'))
 	}
 	assert.Panics(t, f)
 }
 
-func TestFnTypeSpecials(t *testing.T) {
-	assert := assert.New(t)
-	var t0 *FunctionType
+var fnApplyTests = []struct {
+	fn  FunctionType
+	sub Subs
 
-	// electron anti-excitation example
-	// (the slightly more correct representation is `electron → (electron, photon)`
-	// given you know, the electron has simply moved to a lower state of energy)
+	expected FunctionType
+}{
+	{NewFnType(TypeVariable('a'), TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, proton)},
+	{NewFnType(TypeVariable('a'), TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, neutron)},
+	{NewFnType(TypeVariable('a'), TypeVariable('b')), mSubs{'c': proton, 'd': neutron}, NewFnType(TypeVariable('a'), TypeVariable('b'))},
+	{NewFnType(TypeVariable('a'), TypeVariable('b')), mSubs{'a': proton, 'c': neutron}, NewFnType(proton, TypeVariable('b'))},
+	{NewFnType(TypeVariable('a'), TypeVariable('b')), mSubs{'c': proton, 'b': neutron}, NewFnType(TypeVariable('a'), neutron)},
+	{NewFnType(electron, proton), mSubs{'a': proton, 'b': neutron}, NewFnType(electron, proton)},
 
-	// electron → photon
-	t0 = NewFnType(electron, photon)
-	assert.Equal(Types{electron, photon}, t0.TypesRec())
-	assert.Equal(photon, t0.ReturnType())
+	// a -> (b -> c)
+	{NewFnType(TypeVariable('a'), TypeVariable('b'), TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, neutron, proton)},
+	{NewFnType(TypeVariable('a'), TypeVariable('a'), TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, proton, neutron)},
+	{NewFnType(TypeVariable('a'), TypeVariable('b'), TypeVariable('c')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, neutron, TypeVariable('c'))},
+	{NewFnType(TypeVariable('a'), TypeVariable('c'), TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, TypeVariable('c'), neutron)},
 
-	// annihilation time!
-	// annihilation :: positron → electron → photon → (quark, antiquark, gluon)
-	// but for the purpose of this test we won't have antiquarks, gluons and tuple that represents them
-
-	// positron → electron → photon → quark
-	t0 = NewFnType(positron, electron, photon, quark)
-	assert.Equal(Types{positron, electron, photon, quark}, t0.TypesRec())
-	assert.Equal(quark, t0.ReturnType())
-}
-
-func TestFnTypeClone(t *testing.T) {
-	assert := assert.New(t)
-	for _, ft := range fnCloneTests {
-		if ft == ft.Clone() {
-			t.Error("Cloning of *FunctionType should not yield the same pointer")
-			continue
-		}
-		assert.Equal(ft, ft.Clone())
-	}
-
-	// bad stuff
-	t0 := NewFnType(malformed{}, proton)
-	f := func() {
-		t0.Clone()
-	}
-	assert.Panics(f)
-
-	t0 = NewFnType(proton, malformed{})
-	f = func() {
-		t0.Clone()
-	}
-	assert.Panics(f)
+	// (a -> b) -> c
+	{NewFnType(NewFnType(TypeVariable('a'), TypeVariable('b')), TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(NewFnType(proton, neutron), proton)},
 }

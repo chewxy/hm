@@ -2,36 +2,27 @@ package hm
 
 import "fmt"
 
-// Type represents the metatype that is required to build a type system.
-//		- TypeOp
-//		- TypeVariable
-//		- TypeConst
 type Type interface {
-	Name() string
-	Contains(tv *TypeVariable) bool
-	Eq(Type) bool
-
-	// Prune replaces any type variable with the
-	Prune() Type
+	Substitutable
+	Name() string // Name is the name of the constructor
+	Normalize(TypeVarSet, TypeVarSet) (Type, error)
+	Types() Types
 
 	fmt.Formatter
 	fmt.Stringer
 }
 
-// TypeOp is a type constructor. It takes n Types, and creates a new one from it.
-type TypeOp interface {
-	Type
-	Types() Types
-
-	Clone() TypeOp
-	New(...Type) TypeOp
-
-	// Replaces all the instances of tv with t. If your data structure is recursive, it needs to be replaced for the entire data structure
-	// Replace(a, b Type) TypeOp
+type Substitutable interface {
+	Apply(Subs) Substitutable
+	FreeTypeVar() TypeVarSet
 }
 
-// TypeConst is a constant type. Replace() will not change the TypeOp. It's useful for implementing atomic types. Formerly called Atomic
-type TypeConst interface {
-	TypeOp
-	IsConstant() bool
-}
+type TypeConst string
+
+func (t TypeConst) Name() string                            { return string(t) }
+func (t TypeConst) Apply(Subs) Substitutable                { return t }
+func (t TypeConst) FreeTypeVar() TypeVarSet                 { return nil }
+func (t TypeConst) Normalize(k, v TypeVarSet) (Type, error) { return t, nil }
+func (t TypeConst) Types() Types                            { return nil }
+func (t TypeConst) String() string                          { return string(t) }
+func (t TypeConst) Format(s fmt.State, c rune)              { fmt.Fprintf(s, "%s", string(t)) }

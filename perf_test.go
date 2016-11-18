@@ -1,73 +1,101 @@
 package hm
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/stretchr/testify/assert"
-)
+func TestSubsPool(t *testing.T) {
+	var def TypeVariable
+	for i := 0; i < poolSize; i++ {
+		s := BorrowSSubs(i + 1)
+		if cap(s) != i+1 {
+			t.Errorf("Expected s to have cap of %d", i+1)
+			goto mSubTest
+		}
 
-func TestOpts(t *testing.T) {
-	assert := assert.New(t)
+		s[0] = Substitution{TypeVariable('a'), electron}
+		ReturnSubs(s)
+		s = BorrowSSubs(i + 1)
 
-	DontUseFnPool()
-	assert.False(IsUsingFnPool())
+		for _, subst := range s {
+			if subst.T != nil {
+				t.Errorf("sSubsPool %d error: not clean: %v", i, subst)
+				break
+			}
 
-	UseFnPool()
-	assert.True(IsUsingFnPool())
+			if subst.Tv != def {
+				t.Errorf("sSubsPool %d error: not clean: %v", i, subst)
+				break
+			}
+		}
 
-	DontUseTsPool()
-	assert.False(IsUsingTsPool())
+	mSubTest:
+		m := BorrowMSubs()
+		if len(m) != 0 {
+			t.Errorf("Expected borrowed mSubs to have 0 length")
+		}
 
-	UseTsPool()
-	assert.True(IsUsingTsPool())
+		m['a'] = electron
+		ReturnSubs(m)
 
-	DontUseTvPool()
-	assert.False(IsUsingTvPool())
+		m = BorrowMSubs()
+		if len(m) != 0 {
+			t.Errorf("Expected borrowed mSubs to have 0 length")
+		}
 
-	UseTvPool()
-	assert.True(IsUsingTvPool())
+	}
+
+	// oob tests
+	s := BorrowSSubs(10)
+	if cap(s) != 10 {
+		t.Error("Expected a cap of 10")
+	}
+	ReturnSubs(s)
 }
 
-func TestFnPool(t *testing.T) {
-	assert := assert.New(t)
+func TestTypesPool(t *testing.T) {
+	for i := 0; i < poolSize; i++ {
+		ts := BorrowTypes(i + 1)
+		if cap(ts) != i+1 {
+			t.Errorf("Expected ts to have a cap of %v", i+1)
+		}
 
-	fn := NewFnType(proton, proton, NewTypeVar("a"))
-	ReturnFnType(fn)
+		ts[0] = proton
+		ReturnTypes(ts)
+		ts = BorrowTypes(i + 1)
+		for _, v := range ts {
+			if v != nil {
+				t.Errorf("Expected reshly borrowed Types to be nil")
+			}
+		}
+	}
 
-	fn = borrowFnType()
-	assert.Nil(fn.ts[0])
-	assert.Nil(fn.ts[1])
-
-	fn.ts[0] = NewFnType(NewTypeVar("a"), proton)
-	fn.ts[1] = proton
-	ReturnFnType(fn)
-
-	fn = borrowFnType()
-	assert.Nil(fn.ts[0])
-	assert.Nil(fn.ts[1])
+	// oob
+	ts := BorrowTypes(10)
+	if cap(ts) != 10 {
+		t.Errorf("Expected a cap to 10")
+	}
 }
 
-func TestTypes1Pool(t *testing.T) {
-	assert := assert.New(t)
+func TestTypeVarSetPool(t *testing.T) {
+	var def TypeVariable
+	for i := 0; i < poolSize; i++ {
+		ts := BorrowTypeVarSet(i + 1)
+		if cap(ts) != i+1 {
+			t.Errorf("Expected ts to have a cap of %v", i+1)
+		}
 
-	ts := BorrowTypes1()
-	ts[0] = proton
+		ts[0] = 'z'
+		ReturnTypeVarSet(ts)
+		ts = BorrowTypeVarSet(i + 1)
+		for _, v := range ts {
+			if v != def {
+				t.Errorf("Expected reshly borrowed Types to be def")
+			}
+		}
+	}
 
-	ReturnTypes1(ts)
-	ts = BorrowTypes1()
-	assert.Nil(ts[0])
-}
-
-func TestTypeVarPool(t *testing.T) {
-	assert := assert.New(t)
-
-	tv := borrowTypeVar()
-	tv.name = "hello"
-	tv.instance = NewFnType(NewTypeVar("a"), NewTypeVar("a", WithInstance(NewTypeVar("b"))))
-	ReturnTypeVar(tv)
-
-	tv = borrowTypeVar()
-	assert.Equal("", tv.name)
-	assert.Nil(tv.instance)
-	assert.Nil(tv.constraints)
+	// oob
+	tvs := BorrowTypeVarSet(10)
+	if cap(tvs) != 10 {
+		t.Error("Expected a cap of 10")
+	}
 }

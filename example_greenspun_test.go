@@ -10,24 +10,24 @@ import (
 
 const digits = "0123456789"
 
-type TyperNode interface {
-	Node
+type TyperExpression interface {
+	Expression
 	Typer
 }
 
 type λ struct {
 	name string
-	body Node
+	body Expression
 }
 
-func (n λ) Name() string   { return n.name }
-func (n λ) Body() Node     { return n.body }
-func (n λ) IsLambda() bool { return true }
+func (n λ) Name() string     { return n.name }
+func (n λ) Body() Expression { return n.body }
+func (n λ) IsLambda() bool   { return true }
 
 type lit string
 
-func (n lit) Name() string { return string(n) }
-func (n lit) Body() Node   { return n }
+func (n lit) Name() string     { return string(n) }
+func (n lit) Body() Expression { return n }
 func (n lit) Type() Type {
 	switch {
 	case strings.ContainsAny(digits, string(n)) && strings.ContainsAny(digits, string(n[0])):
@@ -43,12 +43,12 @@ func (n lit) IsLambda() bool { return true }
 
 type app struct {
 	f   Lambda
-	arg Node
+	arg Expression
 }
 
-func (n app) Fn() Lambda { return n.f }
-func (n app) Body() Node { return n.arg }
-func (n app) Arg() Node  { return n.arg }
+func (n app) Fn() Expression   { return n.f }
+func (n app) Body() Expression { return n.arg }
+func (n app) Arg() Expression  { return n.arg }
 
 type letrec struct {
 	name string
@@ -56,11 +56,11 @@ type letrec struct {
 	in   Apply
 }
 
-func (n letrec) Name() string     { return n.name }
-func (n letrec) Def() Node        { return n.def }
-func (n letrec) Body() Node       { return n.in }
-func (n letrec) Children() []Node { return []Node{n.def, n.in} }
-func (n letrec) IsLetRec() bool   { return true }
+func (n letrec) Name() string           { return n.name }
+func (n letrec) Def() Expression        { return n.def }
+func (n letrec) Body() Expression       { return n.in }
+func (n letrec) Children() []Expression { return []Expression{n.def, n.in} }
+func (n letrec) IsRecursive() bool      { return true }
 
 type prim byte
 
@@ -70,15 +70,11 @@ const (
 )
 
 // implement Type
-func (t prim) Name() string                   { return t.String() }
-func (t prim) Contains(tv *TypeVariable) bool { return false }
-func (t prim) Eq(other Type) bool {
-	ot, ok := other.(prim)
-	if !ok {
-		return false
-	}
-	return ot == t
-}
+func (t prim) Name() string                                   { return t.String() }
+func (t prim) Apply(Subs) Substitutable                       { return t }
+func (t prim) FreeTypeVar() TypeVarSet                        { return nil }
+func (t prim) Normalize(TypeVarSet, TypeVarSet) (Type, error) { return t, nil }
+func (t prim) Types() Types                                   { return nil }
 
 func (t prim) Format(s fmt.State, c rune) { fmt.Fprintf(s, t.String()) }
 func (t prim) String() string {
@@ -90,15 +86,6 @@ func (t prim) String() string {
 	}
 	return "HELP"
 }
-
-func (t prim) Prune() Type { return t }
-
-// implement TypeOp
-func (t prim) Types() Types       { return nil }
-func (t prim) Clone() TypeOp      { return t }
-func (t prim) New(...Type) TypeOp { return t }
-
-func (t prim) IsConst() bool { return true }
 
 //Phillip Greenspun's tenth law says:
 //		"Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp."
@@ -144,24 +131,21 @@ func Example_greenspun() {
 		app{lit("fac"), lit("5")},
 	}
 
-	predef := map[string]Type{
-		"--":     NewFnType(Float, Float),
-		"if":     NewFnType(Bool, NewFnType(NewTypeVar("a"), NewFnType(NewTypeVar("a"), NewTypeVar("a")))),
-		"isZero": NewFnType(Float, Bool),
-		"mul":    NewFnType(Float, Float, Float),
+	env := SimpleEnv{
+		"--":     &Scheme{tvs: TypeVarSet{'a'}, t: NewFnType(TypeVariable('a'), TypeVariable('a'))},
+		"if":     &Scheme{tvs: TypeVarSet{'a'}, t: NewFnType(Bool, TypeVariable('a'), TypeVariable('a'), TypeVariable('a'))},
+		"isZero": &Scheme{t: NewFnType(Float, Bool)},
+		"mul":    &Scheme{t: NewFnType(Float, Float, Float)},
 	}
 
-	var t Type
-	var err error
-	env := NewSimpleEnv(WithDict(predef))
-
-	if t, err = Infer(fac, env); err != nil {
+	scheme, err := Infer(env, fac)
+	if err != nil {
 		log.Printf("%+v", errors.Cause(err))
 	}
 
-	fmt.Printf("Type: %v | err: %v", t, err)
+	fmt.Printf("Type: %v | err: %v", scheme, err)
 
-	// Outputs:
-	// Type: Float | err: <nil>
+	// Output:
+	// Type: ∀[a]: a | err: <nil>
 
 }

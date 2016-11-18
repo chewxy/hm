@@ -3,127 +3,85 @@ package hm
 import (
 	"fmt"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-var tvEq = []struct {
-	name string
-	a    *TypeVariable
-	b    Type
-
-	equal bool
-}{
-	{"empty == empty (0)", &TypeVariable{}, &TypeVariable{}, true},
-	{"empty == empty (1)", nil, nil, true},
-	{"empty == empty (2)", &TypeVariable{}, nil, true},
-	{"a == empty(nil)", NewTypeVar("a"), nil, false},
-	{"a == a", NewTypeVar("a"), NewTypeVar("a"), true},
-	{"a == b", NewTypeVar("a"), NewTypeVar("b"), false},
-	{"a == proton", NewTypeVar("a"), proton, false},
-	{"a:proton == proton", NewTypeVar("a", WithInstance(proton)), proton, false},
-	{"a:proton == a:proton", NewTypeVar("a", WithInstance(proton)), NewTypeVar("a", WithInstance(proton)), true},
-	{"a:proton == b:proton", NewTypeVar("a", WithInstance(proton)), NewTypeVar("b", WithInstance(proton)), false},
-	{"a:b:<nil> == a:b:<nil>", NewTypeVar("a", WithInstance(NewTypeVar("b"))), NewTypeVar("a", WithInstance(NewTypeVar("b"))), true},
-}
-
-var tvContains = []struct {
-	name string
-	a, b *TypeVariable
-
-	contains bool
-}{
-	{"empty <: empty", &TypeVariable{}, &TypeVariable{}, true},
-	{"empty <: a", &TypeVariable{}, NewTypeVar("a"), false},
-	{"a <: a", NewTypeVar("a"), NewTypeVar("a"), true},
-	{"a:proton <: a:proton", NewTypeVar("a", WithInstance(proton)), NewTypeVar("a", WithInstance(proton)), true},
-	{"a <: a:proton", NewTypeVar("a"), NewTypeVar("a", WithInstance(proton)), false},
-
-	// nil tests
-}
-
-var tvStrings = []struct {
-	name string
-	a    *TypeVariable
-	s    string
-	v    string
-}{
-	{"empty", &TypeVariable{}, "''", "'':<nil>"},
-	{"a", NewTypeVar("a"), "a", "a:<nil>"},
-	{"a:proton", NewTypeVar("a", WithInstance(proton)), "proton", "a:proton"},
-	{"a:b:proton", NewTypeVar("a", WithInstance(NewTypeVar("b", WithInstance(proton)))), "proton", "a:b:proton"},
-}
-
 func TestTypeVariableBasics(t *testing.T) {
-	assert := assert.New(t)
-
-	var tv0, tv1 *TypeVariable
-	var t0, t1 Type
-	t.Log("Empty Type Variable")
-	if ok := tv0.IsEmpty(); !ok {
-		t.Error("Expected empty type variable")
+	tv := TypeVariable('a')
+	if name := tv.Name(); name != "a" {
+		t.Errorf("Expected name to be \"a\". Got %q instead", name)
 	}
 
-	t.Log("Equality tests")
-	for _, tves := range tvEq {
-		tv0 = tves.a
-		t0 = tves.b
-
-		if tv0.Eq(t0) != tves.equal {
-			t.Errorf("Test %q error", tves.name)
-		}
+	if str := tv.String(); str != "a" {
+		t.Errorf("Expected String() of 'a'. Got %q instead", str)
 	}
 
-	t.Log("Equality - same name but different instances: Panic expected")
-	t1 = electron
-	tv0 = NewTypeVar("a", WithInstance(t0))
-	tv1 = NewTypeVar("a", WithInstance(t1))
-	fail := func() {
-		tv0.Eq(tv1)
-	}
-	assert.Panics(fail, "same name but different instances panic expected")
-
-	t.Log("Contains")
-	for _, tvcs := range tvContains {
-		tv0 = tvcs.a
-		tv1 = tvcs.b
-		if tv0.Contains(tv1) != tvcs.contains {
-			t.Errorf("Test %q error", tvcs.name)
-		}
+	if tv.Types() != nil {
+		t.Errorf("Expected Types() of TypeVariable to be nil")
 	}
 
-	t.Log("String (for completeness sake")
-	for _, tvss := range tvStrings {
-		if tvss.a.String() != tvss.s {
-			t.Errorf("Test %q error: Got %q", tvss.name, tvss.a.String())
-		}
+	ftv := tv.FreeTypeVar()
+	if len(ftv) != 1 {
+		t.Errorf("Expected a type variable to be free when FreeTypeVar() is called")
 	}
 
-	t.Log("TypeVar Format (for completeness sake)")
-	for _, tvss := range tvStrings {
-		if fmt.Sprintf("%v", tvss.a) != tvss.s {
-			t.Errorf("Format(%%v) error. Got %q", fmt.Sprintf("%v", tv0))
-		}
-		if fmt.Sprintf("%#v", tvss.a) != tvss.v {
-			t.Errorf("Format(%%#v) error. Got %q", fmt.Sprintf("%v", tv0))
-		}
+	if ftv[0] != tv {
+		t.Errorf("Expected ...")
 	}
 
-	t.Log("TypeVar Name (for completeness sake)")
-	if tv0.Name() != "a" {
-		t.Error("Expected \"a\" to be the name")
+	sub := mSubs{
+		'a': proton,
 	}
 
-	t.Log("TypeVar Instance (for completeness sake")
-	t0 = NewTypeVar("a", WithInstance(proton))
-	assert.Equal(proton, t0.(*TypeVariable).Instance(), "TypeVar instance failed")
+	if tv.Apply(sub) != proton {
+		t.Error("Expected proton")
+	}
+
+	sub = mSubs{
+		'b': proton,
+	}
+
+	if tv.Apply(sub) != tv {
+		t.Error("Expected unchanged")
+	}
 }
 
-func TestTVConsOpt(t *testing.T) {
-	constraints := TypeClassSet{
-		&SimpleTypeClass{},
+func TestTypeVariableNormalize(t *testing.T) {
+	original := TypeVarSet{'c', 'a', 'd'}
+	normalized := TypeVarSet{'a', 'b', 'c'}
+
+	tv := TypeVariable('a')
+	norm, err := tv.Normalize(original, normalized)
+	if err != nil {
+		t.Error(err)
 	}
 
-	tv0 := NewTypeVar("a", WithConstraints(constraints...))
-	assert.Equal(t, constraints, tv0.constraints)
+	if norm != TypeVariable('b') {
+		t.Errorf("Expected 'b'. Got %v", norm)
+	}
+
+	tv = TypeVariable('e')
+	if _, err = tv.Normalize(original, normalized); err == nil {
+		t.Error("Expected an error")
+	}
+}
+
+func TestTypeConst(t *testing.T) {
+	T := proton
+	if T.Name() != "proton" {
+		t.Error("Expected name to be proton")
+	}
+
+	if fmt.Sprintf("%v", T) != "proton" {
+		t.Error("Expected name to be proton")
+	}
+
+	if T.String() != "proton" {
+		t.Error("Expected name to be proton")
+	}
+
+	if T2, err := T.Normalize(nil, nil); err != nil {
+		t.Error(err)
+	} else if T2 != T {
+		t.Error("Const types should return itself")
+	}
 }
