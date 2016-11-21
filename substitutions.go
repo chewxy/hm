@@ -5,7 +5,8 @@ type Subs interface {
 	Add(TypeVariable, Type) Subs
 	Remove(TypeVariable) Subs
 
-	Iter() <-chan Substitution
+	// Iter() <-chan Substitution
+	Iter() []Substitution
 	Size() int
 	Clone() Subs
 }
@@ -15,68 +16,71 @@ type Substitution struct {
 	T  Type
 }
 
-type sSubs []Substitution
+type sSubs struct {
+	s []Substitution
+}
 
-func newSliceSubs(maybeSize ...int) sSubs {
+func newSliceSubs(maybeSize ...int) *sSubs {
 	var size int
 	if len(maybeSize) > 0 && maybeSize[0] > 0 {
 		size = maybeSize[0]
 	}
-	retVal := make(sSubs, size)
-	retVal = retVal[:0]
+	retVal := BorrowSSubs(size)
+	retVal.s = retVal.s[:0]
 	return retVal
 }
 
-func (s sSubs) Get(tv TypeVariable) (Type, bool) {
+func (s *sSubs) Get(tv TypeVariable) (Type, bool) {
 	if i := s.index(tv); i >= 0 {
-		return s[i].T, true
+		return s.s[i].T, true
 	}
 	return nil, false
 }
 
-func (s sSubs) Add(tv TypeVariable, t Type) Subs {
+func (s *sSubs) Add(tv TypeVariable, t Type) Subs {
 	if i := s.index(tv); i >= 0 {
-		s[i].T = t
+		s.s[i].T = t
 		return s
 	}
-	s = append(s, Substitution{tv, t})
+	s.s = append(s.s, Substitution{tv, t})
 	return s
 }
 
-func (s sSubs) Remove(tv TypeVariable) Subs {
+func (s *sSubs) Remove(tv TypeVariable) Subs {
 	if i := s.index(tv); i >= 0 {
 		// for now we keep the order
-		copy(s[i:], s[i+1:])
-		s[len(s)-1].T = nil
-		s = s[:len(s)-1]
+		copy(s.s[i:], s.s[i+1:])
+		s.s[len(s.s)-1].T = nil
+		s.s = s.s[:len(s.s)-1]
 	}
 
 	return s
 }
 
-func (s sSubs) Iter() <-chan Substitution {
-	ch := make(chan Substitution)
+// func (s sSubs) Iter() <-chan Substitution {
+// 	ch := make(chan Substitution)
 
-	go func() {
-		for _, v := range s {
-			ch <- v
-		}
-		close(ch)
-	}()
-	return ch
+// 	go func() {
+// 		for _, v := range s {
+// 			ch <- v
+// 		}
+// 		close(ch)
+// 	}()
+// 	return ch
+// }
+func (s *sSubs) Iter() []Substitution {
+	return s.s
 }
 
-func (s sSubs) Size() int { return len(s) }
-func (s sSubs) Clone() Subs {
-	retVal := make(sSubs, len(s))
-	for i, v := range s {
-		retVal[i] = v
-	}
+func (s *sSubs) Size() int { return len(s.s) }
+func (s *sSubs) Clone() Subs {
+	retVal := BorrowSSubs(len(s.s))
+	copy(retVal.s, s.s)
 	return retVal
 }
 
-func (s sSubs) index(tv TypeVariable) int {
-	for i, sub := range s {
+func (s *sSubs) index(tv TypeVariable) int {
+	for i, sub := range s.s {
 		if sub.Tv == tv {
 			return i
 		}
@@ -90,15 +94,25 @@ func (s mSubs) Get(tv TypeVariable) (Type, bool) { retVal, ok := s[tv]; return r
 func (s mSubs) Add(tv TypeVariable, t Type) Subs { s[tv] = t; return s }
 func (s mSubs) Remove(tv TypeVariable) Subs      { delete(s, tv); return s }
 
-func (s mSubs) Iter() <-chan Substitution {
-	ch := make(chan Substitution)
-	go func() {
-		for k, v := range s {
-			ch <- Substitution{k, v}
-		}
-		close(ch)
-	}()
-	return ch
+// func (s mSubs) Iter() <-chan Substitution {
+// 	ch := make(chan Substitution)
+// 	go func() {
+// 		for k, v := range s {
+// 			ch <- Substitution{k, v}
+// 		}
+// 		close(ch)
+// 	}()
+// 	return ch
+// }
+
+func (s mSubs) Iter() []Substitution {
+	retVal := make([]Substitution, len(s))
+	var i int
+	for k, v := range s {
+		retVal[i] = Substitution{k, v}
+		i++
+	}
+	return retVal
 }
 
 func (s mSubs) Size() int { return len(s) }
@@ -121,17 +135,12 @@ func compose(a, b Subs) (retVal Subs) {
 		return
 	}
 
-	for v := range a.Iter() {
+	for _, v := range a.Iter() {
 		retVal = retVal.Add(v.Tv, v.T)
 	}
 
-	logf("retVal: %v", retVal)
-	enterLoggingContext()
-	defer leaveLoggingContext()
-
-	for v := range retVal.Iter() {
+	for _, v := range retVal.Iter() {
 		retVal = retVal.Add(v.Tv, v.T.Apply(a).(Type))
 	}
-	logf("eh.. returning %v", retVal)
 	return retVal
 }

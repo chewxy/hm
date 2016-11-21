@@ -36,10 +36,10 @@ func TestFunctionTypeBasics(t *testing.T) {
 }
 
 var fnApplyTests = []struct {
-	fn  FunctionType
+	fn  *FunctionType
 	sub Subs
 
-	expected FunctionType
+	expected *FunctionType
 }{
 	{NewFnType(TypeVariable('a'), TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, proton)},
 	{NewFnType(TypeVariable('a'), TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, neutron)},

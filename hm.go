@@ -263,6 +263,7 @@ func Unify(a, b Type) (sub Subs, err error) {
 	case TypeVariable:
 		return bind(at, b)
 	default:
+		logf("Default branch")
 		if a == b {
 			return nil, nil
 		}
@@ -270,7 +271,7 @@ func Unify(a, b Type) (sub Subs, err error) {
 		if btv, ok := b.(TypeVariable); ok {
 			return bind(btv, a)
 		}
-
+		logf("With TYpes")
 		atypes := a.Types()
 		btypes := b.Types()
 		defer ReturnTypes(atypes)
@@ -297,12 +298,6 @@ func unifyMany(a, b Types) (sub Subs, err error) {
 		return nil, errors.Errorf("Unequal length. a: %v b %v", a, b)
 	}
 
-	// at := a[0]
-	// bt := b[0]
-	// if sub, err = Unify(at, bt); err != nil {
-	// 	return
-	// }
-
 	for i, at := range a {
 		bt := b[i]
 
@@ -319,10 +314,10 @@ func unifyMany(a, b Types) (sub Subs, err error) {
 		if sub == nil {
 			sub = s2
 		} else {
-			sub = compose(sub, s2)
-
-			// TODO perf stuff
-
+			sub2 := compose(sub, s2)
+			defer ReturnSubs(sub)
+			defer ReturnSubs(s2)
+			sub = sub2
 		}
 	}
 	return
@@ -336,7 +331,7 @@ func bind(tv TypeVariable, t Type) (sub Subs, err error) {
 		err = errors.Errorf("recursive unification")
 	default:
 		ssub := BorrowSSubs(1)
-		ssub[0] = Substitution{tv, t}
+		ssub.s[0] = Substitution{tv, t}
 		sub = ssub
 	}
 	return

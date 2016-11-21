@@ -6,14 +6,16 @@ type FunctionType struct {
 	a, b Type
 }
 
-func NewFnType(ts ...Type) FunctionType {
+func NewFnType(ts ...Type) *FunctionType {
 	if len(ts) < 2 {
 		panic("Expected at least 2 input types")
 	}
 
-	retVal := FunctionType{
-		a: ts[0],
-	}
+	retVal := BorrowFnType()
+	retVal.a = ts[0]
+	// retVal := &FunctionType{
+	// 	a: ts[0],
+	// }
 
 	if len(ts) > 2 {
 		retVal.b = NewFnType(ts[1:]...)
@@ -23,17 +25,17 @@ func NewFnType(ts ...Type) FunctionType {
 	return retVal
 }
 
-func (t FunctionType) Name() string { return "→" }
-func (t FunctionType) Apply(sub Subs) Substitutable {
+func (t *FunctionType) Name() string { return "→" }
+func (t *FunctionType) Apply(sub Subs) Substitutable {
 	t.a = t.a.Apply(sub).(Type)
 	t.b = t.b.Apply(sub).(Type)
 	return t
 }
 
-func (t FunctionType) FreeTypeVar() TypeVarSet    { return t.a.FreeTypeVar().Union(t.b.FreeTypeVar()) }
-func (t FunctionType) Format(s fmt.State, c rune) { fmt.Fprintf(s, "%v → %v", t.a, t.b) }
-func (t FunctionType) String() string             { return fmt.Sprintf("%v", t) }
-func (t FunctionType) Normalize(k, v TypeVarSet) (Type, error) {
+func (t *FunctionType) FreeTypeVar() TypeVarSet    { return t.a.FreeTypeVar().Union(t.b.FreeTypeVar()) }
+func (t *FunctionType) Format(s fmt.State, c rune) { fmt.Fprintf(s, "%v → %v", t.a, t.b) }
+func (t *FunctionType) String() string             { return fmt.Sprintf("%v", t) }
+func (t *FunctionType) Normalize(k, v TypeVarSet) (Type, error) {
 	var a, b Type
 	var err error
 	if a, err = t.a.Normalize(k, v); err != nil {
@@ -46,7 +48,7 @@ func (t FunctionType) Normalize(k, v TypeVarSet) (Type, error) {
 
 	return NewFnType(a, b), nil
 }
-func (t FunctionType) Types() Types {
+func (t *FunctionType) Types() Types {
 	retVal := BorrowTypes(2)
 	retVal[0] = t.a
 	retVal[1] = t.b

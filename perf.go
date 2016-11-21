@@ -6,16 +6,16 @@ const poolSize = 4
 
 var sSubPool = [poolSize]*sync.Pool{
 	&sync.Pool{
-		New: func() interface{} { return make(sSubs, 1) },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 1, 3)} },
 	},
 	&sync.Pool{
-		New: func() interface{} { return make(sSubs, 2) },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 2, 4)} },
 	},
 	&sync.Pool{
-		New: func() interface{} { return make(sSubs, 3) },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 3, 5)} },
 	},
 	&sync.Pool{
-		New: func() interface{} { return make(sSubs, 4) },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 4, 6)} },
 	},
 }
 
@@ -30,15 +30,15 @@ func ReturnSubs(sub Subs) {
 			delete(s, k)
 		}
 		mSubPool.Put(sub)
-	case sSubs:
-		size := cap(s)
-		s = s[:cap(s)]
+	case *sSubs:
+		size := cap(s.s) - 2
 		if size > 0 && size < poolSize+1 {
 			// reset to empty
-			for i := range s {
-				s[i] = Substitution{}
+			for i := range s.s {
+				s.s[i] = Substitution{}
 			}
 
+			s.s = s.s[:size]
 			sSubPool[size-1].Put(sub)
 		}
 	}
@@ -48,12 +48,13 @@ func BorrowMSubs() mSubs {
 	return mSubPool.Get().(mSubs)
 }
 
-func BorrowSSubs(size int) sSubs {
+func BorrowSSubs(size int) *sSubs {
 	if size > 0 && size < 5 {
-		retVal := sSubPool[size-1].Get().(sSubs)
+		retVal := sSubPool[size-1].Get().(*sSubs)
 		return retVal
 	}
-	return make(sSubs, size)
+	s := make([]Substitution, size)
+	return &sSubs{s: s}
 }
 
 var typesPool = [poolSize]*sync.Pool{
@@ -125,4 +126,27 @@ func ReturnTypeVarSet(ts TypeVarSet) {
 		}
 		typeVarSetPool[size-1].Put(ts)
 	}
+}
+
+var fnTypePool = &sync.Pool{
+	New: func() interface{} { return new(FunctionType) },
+}
+
+func BorrowFnType() *FunctionType {
+	return fnTypePool.Get().(*FunctionType)
+	// return new(FunctionType)
+}
+
+func ReturnFnType(fnt *FunctionType) {
+	if a, ok := fnt.a.(*FunctionType); ok {
+		ReturnFnType(a)
+	}
+
+	if b, ok := fnt.b.(*FunctionType); ok {
+		ReturnFnType(b)
+	}
+
+	fnt.a = nil
+	fnt.b = nil
+	fnTypePool.Put(fnt)
 }
