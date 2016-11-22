@@ -31,4 +31,3 @@ This library is developed using Github. Therefore the workflow is very github-ce
 # Licence
 
 Package `hm` is licenced under the MIT licence.
-0
