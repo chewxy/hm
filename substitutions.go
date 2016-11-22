@@ -2,6 +2,7 @@ package hm
 
 import "fmt"
 
+// Subs is a list of substitution. Internally there are two very basic substitutions - one backed by map and the other a normal slice
 type Subs interface {
 	Get(TypeVariable) (Type, bool)
 	Add(TypeVariable, Type) Subs
@@ -13,6 +14,7 @@ type Subs interface {
 	Clone() Subs
 }
 
+// A Subsitution is a tuple representing the TypeVariable and the replacement Type
 type Substitution struct {
 	Tv TypeVariable
 	T  Type

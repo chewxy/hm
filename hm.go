@@ -2,181 +2,145 @@ package hm
 
 import "github.com/pkg/errors"
 
-type Inferer struct {
-	e   Expression
+// Fresher keeps track of all the TypeVariables that has been generated so far. It has one method - Fresh(), which is to create a new TypeVariable
+type Fresher interface {
+	Fresh() TypeVariable
+}
+
+type inferer struct {
 	env Env
 	cs  Constraints
-	err error
 	t   Type
 
 	count int
 }
 
-func NewInferer(env Env) *Inferer {
-	return &Inferer{
+func newInferer(env Env) *inferer {
+	return &inferer{
 		env: env,
 	}
 }
 
-func (infer *Inferer) fresh() TypeVariable {
+func (infer *inferer) Fresh() TypeVariable {
 	retVal := letters[infer.count]
 	infer.count++
 	return TypeVariable(retVal)
 }
 
-func (infer *Inferer) lookup(name string) {
+func (infer *inferer) lookup(name string) error {
 	s, ok := infer.env.SchemeOf(name)
 	if !ok {
-		infer.err = errors.Errorf("Undefined %v", name)
-		return
+		return errors.Errorf("Undefined %v", name)
 	}
-	infer = instantiate(infer, s)
+	infer.t = Instantiate(infer, s)
+	return nil
 }
 
-func (infer *Inferer) Infer(expr Expression) *Inferer {
-	logf("Infering type of %v", expr)
-	enterLoggingContext()
-	defer leaveLoggingContext()
-
-	if infer.err != nil {
-		return infer
-	}
-
+func (infer *inferer) consGen(expr Expression) (err error) {
 	if et, ok := expr.(Typer); ok {
 		if infer.t = et.Type(); infer.t != nil {
-			return infer
+			return nil
 		}
 	}
 
 	switch et := expr.(type) {
 	case Literal:
-		infer.lookup(et.Name())
+		return infer.lookup(et.Name())
+
 	case Var:
-		logf("Is Var")
-		infer.lookup(et.Name())
-		if infer.err != nil {
+		if err = infer.lookup(et.Name()); err != nil {
 			infer.env.Add(et.Name(), &Scheme{t: et.Type()})
+			err = nil
 		}
+
 	case Lambda:
-		logf("%v Is Lambda", et)
-		tv := infer.fresh()
+		tv := infer.Fresh()
 		env := infer.env // backup
 
-		logf("Cloning env")
 		infer.env = infer.env.Clone()
 		infer.env.Remove(et.Name())
 		sc := new(Scheme)
 		sc.t = tv
 		infer.env.Add(et.Name(), sc)
-		logf("cloned env : %v", infer.env)
 
-		infer.Infer(et.Body())
-		if infer.err != nil {
-			return infer
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of %v. Body: %v", et, et.Body())
 		}
+
 		infer.t = NewFnType(tv, infer.t)
 		infer.env = env // restore backup
-		logf("infer.t: %v", infer.t)
-	case Apply:
-		logf("%v Is Apply", et)
-		infer.Infer(et.Fn())
-		if infer.err != nil {
-			return infer
-		}
 
+	case Apply:
+		if err = infer.consGen(et.Fn()); err != nil {
+			return errors.Wrapf(err, "Unable to infer Fn of Apply: %v. Fn: %v", et, et.Fn())
+		}
 		fnType, fnCs := infer.t, infer.cs
 
-		logf("fnType is %v", fnType)
-		logf("fnCs %v", fnCs)
-		logf("env %v", infer.env)
-
-		infer.Infer(et.Body())
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of Apply: %v. Body: %v", et, et.Body())
+		}
 		bodyType, bodyCs := infer.t, infer.cs
 
-		logf("Body Type is %v", bodyType)
-		logf("bodyCs %v", bodyCs)
-
-		tv := infer.fresh()
+		tv := infer.Fresh()
 		cs := append(fnCs, bodyCs...)
 		cs = append(cs, Constraint{fnType, NewFnType(bodyType, tv)})
-		logf("cs %v", cs)
 
 		infer.t = tv
 		infer.cs = cs
+
 	case LetRec:
-		logf("Is LetRec")
-		tv := infer.fresh()
+		tv := infer.Fresh()
 		// env := infer.env // backup
 
-		logf("Setting up env")
 		infer.env = infer.env.Clone()
 		infer.env.Remove(et.Name())
 		infer.env.Add(et.Name(), &Scheme{tvs: TypeVarSet{tv}, t: tv})
 
-		logf("Inferring def")
-		infer.Infer(et.Def())
-		if infer.err != nil {
-			return infer
+		if err = infer.consGen(et.Def()); err != nil {
+			return errors.Wrapf(err, "Unable to infer the definition of a letRec %v. Def: %v", et, et.Def())
 		}
 		defType, defCs := infer.t, infer.cs
 
-		logf("Solving def")
 		s := newSolver()
 		s.solve(defCs)
 		if s.err != nil {
-			infer.err = s.err
-			return infer
+			return errors.Wrapf(s.err, "Unable to solve constraints of def: %v", defCs)
 		}
 
-		logf("Generalizing")
-		sc := generalize(infer.env.Apply(s.sub).(Env), defType.Apply(s.sub).(Type))
+		sc := Generalize(infer.env.Apply(s.sub).(Env), defType.Apply(s.sub).(Type))
 
 		infer.env.Remove(et.Name())
 		infer.env.Add(et.Name(), sc)
 
-		logf("Inferring body")
-		infer.Infer(et.Body())
-		logf("Done!")
-
-		if infer.err != nil {
-			return infer
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of letRec %v. Body: %v", et, et.Body())
 		}
 
-		logf("Applying sub %v to %v", s.sub, infer.t)
 		infer.t = infer.t.Apply(s.sub).(Type)
-		logf("Applying sub to constraints: %v", infer.cs)
 		infer.cs = infer.cs.Apply(s.sub).(Constraints)
-		logf("Putting together them constraints")
 		infer.cs = append(infer.cs, defCs...)
 
 	case Let:
-		logf("Is Let")
 		env := infer.env
 
-		logf("Inferring def")
-		infer.Infer(et.Def())
+		if err = infer.consGen(et.Def()); err != nil {
+			return errors.Wrapf(err, "Unable to infer the definition of a let %v. Def: %v", et, et.Def())
+		}
 		defType, defCs := infer.t, infer.cs
-		logf("defType %v", defType)
 
 		s := newSolver()
 		s.solve(defCs)
 		if s.err != nil {
-			infer.err = s.err
-			return infer
+			return errors.Wrapf(s.err, "Unable to solve for the constraints of a def %v", defCs)
 		}
 
-		logf("Generalizing %v within %v", defType, env)
-		sc := generalize(env.Apply(s.sub).(Env), defType.Apply(s.sub).(Type))
-		logf("Generalized: %v", sc)
+		sc := Generalize(env.Apply(s.sub).(Env), defType.Apply(s.sub).(Type))
 		infer.env = infer.env.Clone()
 		infer.env.Remove(et.Name())
 		infer.env.Add(et.Name(), sc)
 
-		logf("env %v", infer.env)
-		logf("Inferring body")
-		infer.Infer(et.Body())
-		if infer.err != nil {
-			return infer
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of let %v. Body: %v", et, et.Body())
 		}
 
 		infer.t = infer.t.Apply(s.sub).(Type)
@@ -185,10 +149,17 @@ func (infer *Inferer) Infer(expr Expression) *Inferer {
 
 	}
 
-	return infer
+	return nil
 }
 
-func instantiate(infer *Inferer, s *Scheme) *Inferer {
+// Instantiate takes a fresh name generator, an a polytype and makes a concrete type out of it.
+//
+// If ...
+// 		  Γ ⊢ e: T1  T1 ⊑ T
+//		----------------------
+//		       Γ ⊢ e: T
+//
+func Instantiate(f Fresher, s *Scheme) Type {
 	l := len(s.tvs)
 	tvs := make(TypeVarSet, l)
 
@@ -200,16 +171,23 @@ func instantiate(infer *Inferer, s *Scheme) *Inferer {
 	}
 
 	for i, tv := range s.tvs {
-		f := infer.fresh()
-		tvs[i] = f
-		sub = sub.Add(tv, f)
+		fr := f.Fresh()
+		tvs[i] = fr
+		sub = sub.Add(tv, fr)
 	}
 
-	infer.t = s.t.Apply(sub).(Type)
-	return infer
+	return s.t.Apply(sub).(Type)
 }
 
-func generalize(env Env, t Type) *Scheme {
+// Generalize takes an env and a type and creates the most general possible type - which is a polytype
+//
+// Generalization
+//
+// If ...
+//		  Γ ⊢ e: T1  T1 ∉ free(Γ)
+//		---------------------------
+//		   Γ ⊢ e: ∀ α.T1
+func Generalize(env Env, t Type) *Scheme {
 	logf("generalizing %v over %v", t, env)
 	enterLoggingContext()
 	defer leaveLoggingContext()
@@ -232,7 +210,6 @@ func generalize(env Env, t Type) *Scheme {
 	case len(envFree) == 0 && len(tFree) > 0:
 		// return ?
 	}
-	logf("tFree: %v, envFree %v", tFree, envFree)
 
 	diff = tFree.Difference(envFree)
 
@@ -243,31 +220,82 @@ ret:
 	}
 }
 
+// Infer takes an env, and an expression, and returns a scheme.
+//
+// The Infer function is the core of the HM type inference system. This is a reference implementation and is completely servicable, but not quite performant.
+// You should use this as a reference and write your own infer function.
+//
+// Very briefly, these rules are implemented:
+//
+// Var
+//
+// If x is of type T, in a collection of statements Γ, then we can infer that x has type T when we come to a new instance of x
+//		 x: T ∈ Γ
+//		-----------
+//		 Γ ⊢ x: T
+//
+// Apply
+//
+// If f is a function that takes T1 and returns T2; and if x is of type T1;
+// then we can infer that the result of applying f on x will yield a result has type T2
+//		 Γ ⊢ f: T1→T2  Γ ⊢ x: T1
+//		-------------------------
+//		     Γ ⊢ f(x): T2
+//
+//
+// Lambda Abstraction
+//
+// If we assume x has type T1, and because of that we were able to infer e has type T2
+// then we can infer that the lambda abstraction of e with respect to the variable x,  λx.e,
+// will be a function with type T1→T2
+//		  Γ, x: T1 ⊢ e: T2
+//		-------------------
+//		  Γ ⊢ λx.e: T1→T2
+//
+// Let
+//
+// If we can infer that e1 has type T1 and if we take x to have type T1 such that we could infer that e2 has type T2,
+// then we can infer that the result of letting x = e1 and substituting it into e2 has type T2
+//		  Γ, e1: T1  Γ, x: T1 ⊢ e2: T2
+//		--------------------------------
+//		     Γ ⊢ let x = e1 in e2: T2
+//
 func Infer(env Env, expr Expression) (*Scheme, error) {
-	logf("Infer")
-	enterLoggingContext()
-	defer leaveLoggingContext()
-	logf("Infering with env")
-	infer := NewInferer(env)
-	infer.Infer(expr)
-	if infer.err != nil {
-		return nil, infer.err
+	infer := newInferer(env)
+	if err := infer.consGen(expr); err != nil {
+		return nil, err
 	}
-	logf("Solving...")
-	logf("%v", infer.cs)
+
 	s := newSolver()
 	s.solve(infer.cs)
 
 	if s.err != nil {
 		return nil, s.err
 	}
-	logf("infer.t %v", infer.t)
-	logf("infer.cs: %v", infer.cs)
-	logf("s.sub %v", s.sub)
 	t := infer.t.Apply(s.sub).(Type)
 	return closeOver(t)
 }
 
+// Unify unifies the two types and returns a list of substitutions.
+// These are the rules:
+//
+// Type Constants and Type Constants
+//
+// Type constants (atomic types) have no substitution
+//		c ~ c : []
+//
+// Type Variables and Type Variables
+//
+// Type variables have no substitutions if there are no instances:
+// 		a ~ a : []
+//
+// Default Unification
+//
+// if type variable 'a' is not in 'T', then unification is simple: replace all instances of 'a' with 'T'
+// 		     a ∉ T
+//		---------------
+//		 a ~ T : [a/T]
+//
 func Unify(a, b Type) (sub Subs, err error) {
 	logf("%v ~ %v", a, b)
 	enterLoggingContext()
@@ -360,7 +388,7 @@ func occurs(tv TypeVariable, s Substitutable) bool {
 }
 
 func closeOver(t Type) (sch *Scheme, err error) {
-	sch = generalize(nil, t)
+	sch = Generalize(nil, t)
 	err = sch.normalize()
 	logf("closeoversch: %v", sch)
 	return

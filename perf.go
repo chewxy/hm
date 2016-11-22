@@ -135,7 +135,7 @@ var fnTypePool = &sync.Pool{
 	New: func() interface{} { return new(FunctionType) },
 }
 
-func BorrowFnType() *FunctionType {
+func borrowFnType() *FunctionType {
 	return fnTypePool.Get().(*FunctionType)
 }
 

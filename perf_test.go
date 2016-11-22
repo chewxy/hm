@@ -106,12 +106,12 @@ func TestTypeVarSetPool(t *testing.T) {
 }
 
 func TestFnTypeOol(t *testing.T) {
-	f := BorrowFnType()
+	f := borrowFnType()
 	f.a = NewFnType(proton, electron)
 	f.b = NewFnType(proton, neutron)
 
 	ReturnFnType(f)
-	f = BorrowFnType()
+	f = borrowFnType()
 	if f.a != nil {
 		t.Error("FunctionType not cleaned up: a is not nil")
 	}

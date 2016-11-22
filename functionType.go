@@ -2,16 +2,21 @@ package hm
 
 import "fmt"
 
+// FunctionType is a type constructor that builds function types.
 type FunctionType struct {
 	a, b Type
 }
 
+// NewFnType creates a new FunctionType. Functions are by default right associative. This:
+//		NewFnType(a, a, a)
+// is short hand for this:
+// 		NewFnType(a, NewFnType(a, a))
 func NewFnType(ts ...Type) *FunctionType {
 	if len(ts) < 2 {
 		panic("Expected at least 2 input types")
 	}
 
-	retVal := BorrowFnType()
+	retVal := borrowFnType()
 	retVal.a = ts[0]
 
 	if len(ts) > 2 {
