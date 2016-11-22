@@ -60,7 +60,7 @@ func (s *Scheme) Type() (t Type, isMonoType bool) {
 	return s.t, false
 }
 
-func (s *Scheme) normalize() (err error) {
+func (s *Scheme) Normalize() (err error) {
 	tfv := s.t.FreeTypeVar()
 
 	if len(tfv) == 0 {

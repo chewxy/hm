@@ -389,7 +389,7 @@ func occurs(tv TypeVariable, s Substitutable) bool {
 
 func closeOver(t Type) (sch *Scheme, err error) {
 	sch = Generalize(nil, t)
-	err = sch.normalize()
+	err = sch.Normalize()
 	logf("closeoversch: %v", sch)
 	return
 }
