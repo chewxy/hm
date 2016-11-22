@@ -13,6 +13,11 @@ type Env interface {
 type SimpleEnv map[string]*Scheme
 
 func (e SimpleEnv) Apply(sub Subs) Substitutable {
+	logf("Applying %v to env", sub)
+	if sub == nil {
+		return e
+	}
+
 	for _, v := range e {
 		v.Apply(sub) // apply mutates Scheme, so no need to set
 	}

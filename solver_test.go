@@ -43,7 +43,7 @@ func TestSolver(t *testing.T) {
 			t.Error(solver.err)
 		}
 
-		for v := range sts.expected.Iter() {
+		for _, v := range sts.expected.Iter() {
 			if T, ok := solver.sub.Get(v.Tv); !ok {
 				t.Errorf("Test %d: Expected type variable %v in subs: %v", i, v.Tv, solver.sub)
 				break

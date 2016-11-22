@@ -20,11 +20,11 @@ func TestConstraint(t *testing.T) {
 	}
 
 	c = c.Apply(subs).(Constraint)
-	if c.a != NewFnType(proton, proton) {
-		t.Errorf("c : %v", c)
+	if !c.a.Eq(NewFnType(proton, proton)) {
+		t.Errorf("c.a: %v", c)
 	}
 
-	if c.b != NewFnType(proton, neutron) {
+	if !c.b.Eq(NewFnType(proton, neutron)) {
 		t.Errorf("c.b: %v", c)
 	}
 }

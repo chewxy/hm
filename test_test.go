@@ -34,6 +34,12 @@ func (l list) Normalize(k, v TypeVarSet) (Type, error) {
 	return l, nil
 }
 func (l list) Types() Types { return Types{l.t} }
+func (l list) Eq(other Type) bool {
+	if ot, ok := other.(list); ok {
+		return ot.t.Eq(l.t)
+	}
+	return false
+}
 
 type mirrorUniverseList struct {
 	t Type
@@ -54,3 +60,9 @@ func (l mirrorUniverseList) Normalize(k, v TypeVarSet) (Type, error) {
 	return l, nil
 }
 func (l mirrorUniverseList) Types() Types { return Types{l.t} }
+func (l mirrorUniverseList) Eq(other Type) bool {
+	if ot, ok := other.(list); ok {
+		return ot.t.Eq(l.t)
+	}
+	return false
+}

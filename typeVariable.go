@@ -32,3 +32,4 @@ func (t TypeVariable) Normalize(k, v TypeVarSet) (Type, error) {
 func (t TypeVariable) Types() Types               { return nil }
 func (t TypeVariable) String() string             { return string(t) }
 func (t TypeVariable) Format(s fmt.State, c rune) { fmt.Fprintf(s, "%c", rune(t)) }
+func (t TypeVariable) Eq(other Type) bool         { return other == t }

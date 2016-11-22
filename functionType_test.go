@@ -22,8 +22,8 @@ func TestFunctionTypeBasics(t *testing.T) {
 	}
 
 	for _, fas := range fnApplyTests {
-		fn := fas.fn.Apply(fas.sub)
-		if fn != fas.expected {
+		fn := fas.fn.Apply(fas.sub).(*FunctionType)
+		if !fn.Eq(fas.expected) {
 			t.Errorf("Expected %v. Got %v instead", fas.expected, fn)
 		}
 	}

@@ -1,6 +1,9 @@
 package hm
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 var subsTests = []struct {
 	op string
@@ -49,7 +52,7 @@ func testSubs(t *testing.T, sub Subs) {
 		{TypeVariable('c'), proton},
 	}
 
-	for s := range sub.Iter() {
+	for _, s := range sub.Iter() {
 		var found bool
 		for _, c := range correct {
 			if s.T == c.T && s.Tv == c.Tv {
@@ -83,7 +86,7 @@ func TestSliceSubs(t *testing.T) {
 	}
 
 	sub = newSliceSubs(5)
-	if cap(sub.(sSubs)) != 5 {
+	if cap(sub.(*sSubs).s) != 5 {
 		t.Error("Expected a cap of 5")
 	}
 	if sub.Size() != 0 {
@@ -91,6 +94,14 @@ func TestSliceSubs(t *testing.T) {
 	}
 
 	testSubs(t, sub)
+
+	// Format for completeness sake
+	sub = newSliceSubs(2)
+	sub = sub.Add('a', proton)
+	sub = sub.Add('b', neutron)
+	if fmt.Sprintf("%v", sub) != "{a: proton, b: neutron}" {
+		t.Errorf("Format of sub is wrong. Got %q instead", sub)
+	}
 }
 
 func TestMapSubs(t *testing.T) {
@@ -110,19 +121,19 @@ var composeTests = []struct {
 
 	expected Subs
 }{
-	{mSubs{'a': proton}, sSubs{{'b', neutron}}, sSubs{{'a', proton}, {'b', neutron}}},
-	{sSubs{{'b', neutron}}, mSubs{'a': proton}, mSubs{'a': proton, 'b': neutron}},
+	{mSubs{'a': proton}, &sSubs{[]Substitution{{'b', neutron}}}, &sSubs{[]Substitution{{'a', proton}, {'b', neutron}}}},
+	{&sSubs{[]Substitution{{'b', neutron}}}, mSubs{'a': proton}, mSubs{'a': proton, 'b': neutron}},
 
-	{mSubs{'a': proton, 'b': neutron}, sSubs{{'b', neutron}}, sSubs{{'a', proton}, {'b', neutron}}},
-	{mSubs{'a': proton, 'b': TypeVariable('a')}, sSubs{{'b', neutron}}, sSubs{{'a', proton}, {'b', proton}}},
-	{mSubs{'a': proton}, sSubs{{'b', TypeVariable('a')}}, sSubs{{'a', proton}, {'b', proton}}},
+	{mSubs{'a': proton, 'b': neutron}, &sSubs{[]Substitution{{'b', neutron}}}, &sSubs{[]Substitution{{'a', proton}, {'b', neutron}}}},
+	{mSubs{'a': proton, 'b': TypeVariable('a')}, &sSubs{[]Substitution{{'b', neutron}}}, &sSubs{[]Substitution{{'a', proton}, {'b', proton}}}},
+	{mSubs{'a': proton}, &sSubs{[]Substitution{{'b', TypeVariable('a')}}}, &sSubs{[]Substitution{{'a', proton}, {'b', proton}}}},
 }
 
 func TestCompose(t *testing.T) {
 	for i, cts := range composeTests {
 		subs := compose(cts.a, cts.b)
 
-		for v := range cts.expected.Iter() {
+		for _, v := range cts.expected.Iter() {
 			if T, ok := subs.Get(v.Tv); !ok {
 				t.Errorf("Test %d: Expected TypeVariable %v to be in subs", i, v.Tv)
 			} else if T != v.T {

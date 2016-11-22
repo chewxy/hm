@@ -2,20 +2,23 @@ package hm
 
 import "sync"
 
-const poolSize = 4
+const (
+	poolSize = 4
+	extraCap = 2
+)
 
 var sSubPool = [poolSize]*sync.Pool{
 	&sync.Pool{
-		New: func() interface{} { return &sSubs{s: make([]Substitution, 1, 3)} },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 1, 1+extraCap)} },
 	},
 	&sync.Pool{
-		New: func() interface{} { return &sSubs{s: make([]Substitution, 2, 4)} },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 2, 2+extraCap)} },
 	},
 	&sync.Pool{
-		New: func() interface{} { return &sSubs{s: make([]Substitution, 3, 5)} },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 3, 3+extraCap)} },
 	},
 	&sync.Pool{
-		New: func() interface{} { return &sSubs{s: make([]Substitution, 4, 6)} },
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 4, 4+extraCap)} },
 	},
 }
 
@@ -134,7 +137,6 @@ var fnTypePool = &sync.Pool{
 
 func BorrowFnType() *FunctionType {
 	return fnTypePool.Get().(*FunctionType)
-	// return new(FunctionType)
 }
 
 func ReturnFnType(fnt *FunctionType) {

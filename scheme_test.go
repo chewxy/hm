@@ -1,6 +1,9 @@
 package hm
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestSchemeBasics(t *testing.T) {
 	s := new(Scheme)
@@ -22,7 +25,7 @@ func TestSchemeBasics(t *testing.T) {
 		t.Error("TypeVarSet mutated")
 	}
 
-	if s.t != NewFnType(electron, proton) {
+	if !s.t.Eq(NewFnType(electron, proton)) {
 		t.Error("Application failed")
 	}
 
@@ -34,6 +37,20 @@ func TestSchemeBasics(t *testing.T) {
 
 	if !ftv.Equals(TypeVarSet{'c'}) {
 		t.Errorf("Expected ftv: {'c'}. Got %v instead", ftv)
+	}
+
+	// format
+	if fmt.Sprintf("%v", s) != "∀[a, b]: c → proton" {
+		t.Errorf("Scheme format is wrong.: Got %q", fmt.Sprintf("%v", s))
+	}
+
+	// Polytype scheme.Type
+	T, isMono := s.Type()
+	if isMono {
+		t.Error("%v is supposed to be a polytype. It shouldn't return true", s)
+	}
+	if !T.Eq(NewFnType(TypeVariable('c'), proton)) {
+		t.Error("Wrong type returned by scheme")
 	}
 }
 

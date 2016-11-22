@@ -1,5 +1,7 @@
 package hm
 
+import "fmt"
+
 type Subs interface {
 	Get(TypeVariable) (Type, bool)
 	Add(TypeVariable, Type) Subs
@@ -57,22 +59,8 @@ func (s *sSubs) Remove(tv TypeVariable) Subs {
 	return s
 }
 
-// func (s sSubs) Iter() <-chan Substitution {
-// 	ch := make(chan Substitution)
-
-// 	go func() {
-// 		for _, v := range s {
-// 			ch <- v
-// 		}
-// 		close(ch)
-// 	}()
-// 	return ch
-// }
-func (s *sSubs) Iter() []Substitution {
-	return s.s
-}
-
-func (s *sSubs) Size() int { return len(s.s) }
+func (s *sSubs) Iter() []Substitution { return s.s }
+func (s *sSubs) Size() int            { return len(s.s) }
 func (s *sSubs) Clone() Subs {
 	retVal := BorrowSSubs(len(s.s))
 	copy(retVal.s, s.s)
@@ -88,22 +76,24 @@ func (s *sSubs) index(tv TypeVariable) int {
 	return -1
 }
 
+func (s *sSubs) Format(state fmt.State, c rune) {
+	state.Write([]byte{'{'})
+	for i, v := range s.s {
+		if i < len(s.s)-1 {
+			fmt.Fprintf(state, "%v: %v, ", v.Tv, v.T)
+
+		} else {
+			fmt.Fprintf(state, "%v: %v", v.Tv, v.T)
+		}
+	}
+	state.Write([]byte{'}'})
+}
+
 type mSubs map[TypeVariable]Type
 
 func (s mSubs) Get(tv TypeVariable) (Type, bool) { retVal, ok := s[tv]; return retVal, ok }
 func (s mSubs) Add(tv TypeVariable, t Type) Subs { s[tv] = t; return s }
 func (s mSubs) Remove(tv TypeVariable) Subs      { delete(s, tv); return s }
-
-// func (s mSubs) Iter() <-chan Substitution {
-// 	ch := make(chan Substitution)
-// 	go func() {
-// 		for k, v := range s {
-// 			ch <- Substitution{k, v}
-// 		}
-// 		close(ch)
-// 	}()
-// 	return ch
-// }
 
 func (s mSubs) Iter() []Substitution {
 	retVal := make([]Substitution, len(s))

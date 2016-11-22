@@ -6,16 +6,20 @@ func TestSubsPool(t *testing.T) {
 	var def TypeVariable
 	for i := 0; i < poolSize; i++ {
 		s := BorrowSSubs(i + 1)
-		if cap(s) != i+1 {
-			t.Errorf("Expected s to have cap of %d", i+1)
+		if cap(s.s) != (i+1)+extraCap {
+			t.Errorf("Expected s to have cap of %d", i+1+extraCap)
+			goto mSubTest
+		}
+		if len(s.s) != (i + 1) {
+			t.Errorf("Expected s to have a len of %d", i+1)
 			goto mSubTest
 		}
 
-		s[0] = Substitution{TypeVariable('a'), electron}
+		s.s[0] = Substitution{TypeVariable('a'), electron}
 		ReturnSubs(s)
 		s = BorrowSSubs(i + 1)
 
-		for _, subst := range s {
+		for _, subst := range s.s {
 			if subst.T != nil {
 				t.Errorf("sSubsPool %d error: not clean: %v", i, subst)
 				break
@@ -45,7 +49,7 @@ func TestSubsPool(t *testing.T) {
 
 	// oob tests
 	s := BorrowSSubs(10)
-	if cap(s) != 10 {
+	if cap(s.s) != 10 {
 		t.Error("Expected a cap of 10")
 	}
 	ReturnSubs(s)
@@ -73,6 +77,7 @@ func TestTypesPool(t *testing.T) {
 	if cap(ts) != 10 {
 		t.Errorf("Expected a cap to 10")
 	}
+
 }
 
 func TestTypeVarSetPool(t *testing.T) {
@@ -98,4 +103,20 @@ func TestTypeVarSetPool(t *testing.T) {
 	if cap(tvs) != 10 {
 		t.Error("Expected a cap of 10")
 	}
+}
+
+func TestFnTypeOol(t *testing.T) {
+	f := BorrowFnType()
+	f.a = NewFnType(proton, electron)
+	f.b = NewFnType(proton, neutron)
+
+	ReturnFnType(f)
+	f = BorrowFnType()
+	if f.a != nil {
+		t.Error("FunctionType not cleaned up: a is not nil")
+	}
+	if f.b != nil {
+		t.Error("FunctionType not cleaned up: b is not nil")
+	}
+
 }

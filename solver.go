@@ -10,7 +10,10 @@ func newSolver() *solver {
 }
 
 func (s *solver) solve(cs Constraints) {
-	logf("solving constraints")
+	logf("solving constraints: %d", len(cs))
+	enterLoggingContext()
+	defer leaveLoggingContext()
+	logf("starting sub %v", s.sub)
 	if s.err != nil {
 		return
 	}
@@ -18,22 +21,17 @@ func (s *solver) solve(cs Constraints) {
 	switch len(cs) {
 	case 0:
 		return
-	case 1:
-		logf("len1")
-		c := cs[0]
-		s.sub, s.err = Unify(c.a, c.b)
-		logf("s.sub: %v", s.sub)
-		logf("s.err %v", s.err)
 	default:
 		var sub Subs
 		c := cs[0]
-		s.sub, s.err = Unify(c.a, c.b)
+		sub, s.err = Unify(c.a, c.b)
 		defer ReturnSubs(s.sub)
 
 		s.sub = compose(sub, s.sub)
-		s.solve(cs[1:])
+		cs = cs[1:].Apply(s.sub).(Constraints)
+		s.solve(cs)
 
 	}
-
+	logf("Ending Sub %v", s.sub)
 	return
 }

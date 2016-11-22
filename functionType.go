@@ -13,9 +13,6 @@ func NewFnType(ts ...Type) *FunctionType {
 
 	retVal := BorrowFnType()
 	retVal.a = ts[0]
-	// retVal := &FunctionType{
-	// 	a: ts[0],
-	// }
 
 	if len(ts) > 2 {
 		retVal.b = NewFnType(ts[1:]...)
@@ -53,4 +50,11 @@ func (t *FunctionType) Types() Types {
 	retVal[0] = t.a
 	retVal[1] = t.b
 	return retVal
+}
+
+func (t *FunctionType) Eq(other Type) bool {
+	if ot, ok := other.(*FunctionType); ok {
+		return ot.a.Eq(t.a) && ot.b.Eq(t.b)
+	}
+	return false
 }

@@ -5,10 +5,21 @@ import "fmt"
 type Constraints []Constraint
 
 func (cs Constraints) Apply(sub Subs) Substitutable {
+	// an optimization
+	if sub == nil {
+		return cs
+	}
+
+	if len(cs) == 0 {
+		return cs
+	}
+
 	logf("Constraints: %d", len(cs))
+	logf("Applying %v to %v", sub, cs)
 	for i, c := range cs {
 		cs[i] = c.Apply(sub).(Constraint)
 	}
+	logf("Constraints %v", cs)
 	return cs
 }
 

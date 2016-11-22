@@ -8,6 +8,10 @@ type Scheme struct {
 }
 
 func (s *Scheme) Apply(sub Subs) Substitutable {
+	logf("s: %v, sub: %v", s, sub)
+	if sub == nil {
+		return s
+	}
 	sub = sub.Clone()
 	defer ReturnSubs(sub)
 
@@ -46,6 +50,14 @@ func (s *Scheme) Format(state fmt.State, c rune) {
 		}
 	}
 	fmt.Fprintf(state, "]: %v", s.t)
+}
+
+// Type() returns the type of the scheme, as well as a boolean indicating if *Scheme represents a monotype. If it's a polytype, it'll return false
+func (s *Scheme) Type() (t Type, isMonoType bool) {
+	if len(s.tvs) == 0 {
+		return s.t, true
+	}
+	return s.t, false
 }
 
 func (s *Scheme) normalize() (err error) {

@@ -74,7 +74,7 @@ func TestUnify(t *testing.T) {
 			continue
 		}
 
-		for s := range uts.subs.Iter() {
+		for _, s := range uts.subs.Iter() {
 			if T, ok := sub.Get(s.Tv); !ok {
 				t.Errorf("Test: %q TypeVariable %v expected in result", uts.name, s.Tv)
 			} else if T != s.T {
@@ -127,8 +127,8 @@ func TestInfer(t *testing.T) {
 			}
 		}
 
-		if sch.t != its.correct {
-			t.Errorf("Test %q: Expected %v. Got %v", its.correct, sch.t)
+		if !sch.t.Eq(its.correct) {
+			t.Errorf("Test %q: Expected %v. Got %v", its.name, its.correct, sch.t)
 		}
 
 		for _, tv := range its.correctTVS {
@@ -142,4 +142,5 @@ func TestInfer(t *testing.T) {
 			t.Errorf("Test %q: Expected scheme to have %v. Got %v instead", its.name, its.correctTVS, sch.tvs)
 		}
 	}
+
 }

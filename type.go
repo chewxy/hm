@@ -7,6 +7,7 @@ type Type interface {
 	Name() string // Name is the name of the constructor
 	Normalize(TypeVarSet, TypeVarSet) (Type, error)
 	Types() Types
+	Eq(Type) bool
 
 	fmt.Formatter
 	fmt.Stringer
@@ -26,3 +27,4 @@ func (t TypeConst) Normalize(k, v TypeVarSet) (Type, error) { return t, nil }
 func (t TypeConst) Types() Types                            { return nil }
 func (t TypeConst) String() string                          { return string(t) }
 func (t TypeConst) Format(s fmt.State, c rune)              { fmt.Fprintf(s, "%s", string(t)) }
+func (t TypeConst) Eq(other Type) bool                      { return other == t }

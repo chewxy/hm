@@ -58,7 +58,7 @@ func (infer *Inferer) Infer(expr Expression) *Inferer {
 			infer.env.Add(et.Name(), &Scheme{t: et.Type()})
 		}
 	case Lambda:
-		logf("Is Lambda")
+		logf("%v Is Lambda", et)
 		tv := infer.fresh()
 		env := infer.env // backup
 
@@ -78,7 +78,7 @@ func (infer *Inferer) Infer(expr Expression) *Inferer {
 		infer.env = env // restore backup
 		logf("infer.t: %v", infer.t)
 	case Apply:
-		logf("Is Apply")
+		logf("%v Is Apply", et)
 		infer.Infer(et.Fn())
 		if infer.err != nil {
 			return infer
@@ -88,6 +88,7 @@ func (infer *Inferer) Infer(expr Expression) *Inferer {
 
 		logf("fnType is %v", fnType)
 		logf("fnCs %v", fnCs)
+		logf("env %v", infer.env)
 
 		infer.Infer(et.Body())
 		bodyType, bodyCs := infer.t, infer.cs
@@ -103,7 +104,7 @@ func (infer *Inferer) Infer(expr Expression) *Inferer {
 		infer.t = tv
 		infer.cs = cs
 	case LetRec:
-		logf("Getting new fresh")
+		logf("Is LetRec")
 		tv := infer.fresh()
 		// env := infer.env // backup
 
@@ -149,9 +150,13 @@ func (infer *Inferer) Infer(expr Expression) *Inferer {
 		infer.cs = append(infer.cs, defCs...)
 
 	case Let:
+		logf("Is Let")
 		env := infer.env
+
+		logf("Inferring def")
 		infer.Infer(et.Def())
 		defType, defCs := infer.t, infer.cs
+		logf("defType %v", defType)
 
 		s := newSolver()
 		s.solve(defCs)
@@ -160,11 +165,15 @@ func (infer *Inferer) Infer(expr Expression) *Inferer {
 			return infer
 		}
 
+		logf("Generalizing %v within %v", defType, env)
 		sc := generalize(env.Apply(s.sub).(Env), defType.Apply(s.sub).(Type))
+		logf("Generalized: %v", sc)
 		infer.env = infer.env.Clone()
 		infer.env.Remove(et.Name())
 		infer.env.Add(et.Name(), sc)
 
+		logf("env %v", infer.env)
+		logf("Inferring body")
 		infer.Infer(et.Body())
 		if infer.err != nil {
 			return infer
@@ -215,12 +224,12 @@ func generalize(env Env, t Type) *Scheme {
 	switch {
 	case envFree == nil && tFree == nil:
 		goto ret
-	case envFree != nil && tFree != nil:
+	case len(envFree) > 0 && len(tFree) > 0:
 		defer ReturnTypeVarSet(envFree)
 		defer ReturnTypeVarSet(tFree)
-	case envFree != nil && tFree == nil:
-		// returnEnvFree?
-	case envFree == nil && tFree != nil:
+	case len(envFree) > 0 && len(tFree) == 0:
+		// cannot return envFree because envFree will just be sorted and set
+	case len(envFree) == 0 && len(tFree) > 0:
 		// return ?
 	}
 	logf("tFree: %v, envFree %v", tFree, envFree)
@@ -235,12 +244,17 @@ ret:
 }
 
 func Infer(env Env, expr Expression) (*Scheme, error) {
+	logf("Infer")
+	enterLoggingContext()
+	defer leaveLoggingContext()
+	logf("Infering with env")
 	infer := NewInferer(env)
 	infer.Infer(expr)
 	if infer.err != nil {
 		return nil, infer.err
 	}
-
+	logf("Solving...")
+	logf("%v", infer.cs)
 	s := newSolver()
 	s.solve(infer.cs)
 
@@ -263,15 +277,13 @@ func Unify(a, b Type) (sub Subs, err error) {
 	case TypeVariable:
 		return bind(at, b)
 	default:
-		logf("Default branch")
-		if a == b {
+		if a.Eq(b) {
 			return nil, nil
 		}
 
 		if btv, ok := b.(TypeVariable); ok {
 			return bind(btv, a)
 		}
-		logf("With TYpes")
 		atypes := a.Types()
 		btypes := b.Types()
 		defer ReturnTypes(atypes)
@@ -315,8 +327,10 @@ func unifyMany(a, b Types) (sub Subs, err error) {
 			sub = s2
 		} else {
 			sub2 := compose(sub, s2)
-			defer ReturnSubs(sub)
 			defer ReturnSubs(s2)
+			if sub2 != sub {
+				defer ReturnSubs(sub)
+			}
 			sub = sub2
 		}
 	}
@@ -334,6 +348,7 @@ func bind(tv TypeVariable, t Type) (sub Subs, err error) {
 		ssub.s[0] = Substitution{tv, t}
 		sub = ssub
 	}
+	logf("Sub %v", sub)
 	return
 }
 
