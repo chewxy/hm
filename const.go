@@ -5,4 +5,7 @@
 // this library provides the necessary types and functions for creating such a system.
 //
 // The key to the HM type inference system is in the Unify() function.
+
 package hm
+
+const letters = `abcdefghijklmnopqrstuvwxyz`

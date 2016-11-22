@@ -1,130 +1,36 @@
 package hm
 
-import "fmt"
+import (
+	"fmt"
 
-// TypeVariable represents a type variable. It allows polymorphic types
-type TypeVariable struct {
-	name     string
-	instance Type
+	"github.com/pkg/errors"
+)
 
-	constraints TypeClassSet
+// TypeVariable is a variable that ranges over the types - that is to say it can take any type.
+type TypeVariable rune
+
+func (t TypeVariable) Name() string { return string(t) }
+func (t TypeVariable) Apply(sub Subs) Substitutable {
+	if sub == nil {
+		return t
+	}
+
+	if retVal, ok := sub.Get(t); ok {
+		return retVal
+	}
+
+	return t
 }
 
-type TypeVarConsOpt func(tv *TypeVariable)
-
-// WithInstance is an option that creates a TypeVariable with an instance already
-func WithInstance(t Type) TypeVarConsOpt {
-	f := func(tv *TypeVariable) {
-		tv.instance = t
+func (t TypeVariable) FreeTypeVar() TypeVarSet { tvs := BorrowTypeVarSet(1); tvs[0] = t; return tvs }
+func (t TypeVariable) Normalize(k, v TypeVarSet) (Type, error) {
+	if i := k.Index(t); i >= 0 {
+		return v[i], nil
 	}
-	return f
+	return nil, errors.Errorf("Type Variable %v not in signature", t)
 }
 
-// WithConstraints is an option that creates a TypeVariable with a type class constraints
-func WithConstraints(constraints ...TypeClass) TypeVarConsOpt {
-	f := func(tv *TypeVariable) {
-		tv.constraints = TypeClassSet(constraints)
-	}
-	return f
-}
-
-// NewTypeVar creates a new TypeVariable
-func NewTypeVar(name string, opts ...TypeVarConsOpt) *TypeVariable {
-	retVal := borrowTypeVar()
-	retVal.name = name
-
-	for _, opt := range opts {
-		opt(retVal)
-	}
-
-	return retVal
-}
-
-func (t *TypeVariable) Name() string { return t.name }
-
-func (t *TypeVariable) Contains(tv *TypeVariable) bool {
-	if t.Eq(tv) {
-		return true
-	}
-
-	return false
-}
-
-func (t *TypeVariable) Eq(other Type) bool {
-	if other == nil {
-		if t.IsEmpty() {
-			return true
-		}
-		return false
-	}
-
-	var tv *TypeVariable
-	var ok bool
-	if tv, ok = other.(*TypeVariable); !ok {
-		return false
-	}
-
-	switch {
-	case tv == t, tv == nil && t == nil:
-		return true
-	case t.name != tv.name:
-		return false
-	}
-
-	switch {
-	case t.instance != nil && tv.instance != nil:
-		if !t.instance.Eq(tv.instance) {
-			panic(fmt.Sprintf(tvinstance, t, tv, t.name))
-		}
-		return true
-	case t.instance == nil && tv.instance == nil:
-		return true
-	default:
-		return false
-	}
-
-}
-
-func (t *TypeVariable) Format(state fmt.State, c rune) {
-	if t.instance == nil {
-		name := "''"
-		if t.name != "" {
-			name = t.name
-		}
-
-		if state.Flag('#') {
-			fmt.Fprintf(state, "%s:%#v", name, t.instance)
-		} else {
-			fmt.Fprintf(state, "%v", name)
-		}
-
-	} else {
-		if state.Flag('#') {
-			fmt.Fprintf(state, "%s:%#v", t.name, t.instance)
-		} else {
-			fmt.Fprintf(state, "%v", t.instance)
-		}
-	}
-}
-
-func (t *TypeVariable) String() string {
-	if t.instance != nil {
-		return t.instance.String()
-	}
-	if t.name == "" {
-		return "''"
-	}
-	return t.name
-}
-
-func (t *TypeVariable) Prune() Type {
-	return Prune(t)
-}
-
-// IsEmpty returns true if it's a dummy/empty type variable - defined as a TypeVariable with no name, and no constraints nor instances
-func (t *TypeVariable) IsEmpty() bool {
-	return t == nil || (t.name == "" && t.instance == nil && (t.constraints == nil || len(t.constraints) == 0))
-}
-
-// Instance returns the instance that defines the TypeVariable
-func (t *TypeVariable) Instance() Type { return t.instance }
+func (t TypeVariable) Types() Types               { return nil }
+func (t TypeVariable) String() string             { return string(t) }
+func (t TypeVariable) Format(s fmt.State, c rune) { fmt.Fprintf(s, "%c", rune(t)) }
+func (t TypeVariable) Eq(other Type) bool         { return other == t }

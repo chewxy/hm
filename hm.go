@@ -2,160 +2,226 @@ package hm
 
 import "github.com/pkg/errors"
 
-// Env is the environment at which a type is live.
-type Env interface {
-	// TypeOf returns the type of the identifier
-	TypeOf(id string) (Type, error)
-
-	// Add adds the identifier and type
-	Add(id string, t Type) Env
-
-	// AddSpecified adds a TypeVariable to the set of specified type variables
-	AddConcreteVar(tv *TypeVariable) Env
-
-	// Replacements returns the set of replacements
-	Replacements() map[*TypeVariable]Type
-
-	// Specified is a set of TypeVariables that have been specified
-	ConcreteVars() Types
-
-	// Clone clones the Env
-	Clone() Env
+// Fresher keeps track of all the TypeVariables that has been generated so far. It has one method - Fresh(), which is to create a new TypeVariable
+type Fresher interface {
+	Fresh() TypeVariable
 }
 
-type SimpleEnvConsOpt func(*SimpleEnv)
+type inferer struct {
+	env Env
+	cs  Constraints
+	t   Type
 
-// WithDict is an option for constructing a *SumpleEnv with a pre-defined dictionary of known types
-func WithDict(m map[string]Type) SimpleEnvConsOpt {
-	f := func(env *SimpleEnv) {
-		env.m = m
-	}
-	return f
+	count int
 }
 
-// WithConcreteVars is an option for constructing a *SimpleEnv with a pre-defined list of concrete type variables
-func WithConcreteVars(s Types) SimpleEnvConsOpt {
-	f := func(env *SimpleEnv) {
-		env.s = env.s.Union(s)
-	}
-	return f
-}
-
-// A SimpleEnv is a very rudimentary structure for mapping a name a type
-type SimpleEnv struct {
-	m map[string]Type
-	s Types
-
-	r map[*TypeVariable]Type
-}
-
-// NewSimpleEnv creates a *SimpleEnv
-func NewSimpleEnv(opts ...SimpleEnvConsOpt) *SimpleEnv {
-	env := &SimpleEnv{
-		m: make(map[string]Type),
-		r: make(map[*TypeVariable]Type),
-	}
-
-	for _, opt := range opts {
-		opt(env)
-	}
-
-	return env
-}
-
-func (env *SimpleEnv) TypeOf(id string) (Type, error) {
-	if t, ok := env.m[id]; ok {
-		return env.Fresh(t), nil
-	}
-
-	return nil, errors.Errorf("Identifier %q not defined", id)
-}
-
-func (env *SimpleEnv) Add(id string, t Type) Env {
-	env.m[id] = t
-	return env
-}
-
-func (env *SimpleEnv) AddConcreteVar(tv *TypeVariable) Env {
-	env.s = env.s.Add(tv)
-	return env
-}
-
-func (env *SimpleEnv) Replacements() map[*TypeVariable]Type {
-	return env.r
-}
-
-func (env *SimpleEnv) ConcreteVars() Types {
-	return env.s
-}
-
-func (env *SimpleEnv) Clone() Env {
-	m := make(map[string]Type)
-	for k, v := range env.m {
-		m[k] = v
-	}
-
-	r := make(map[*TypeVariable]Type)
-	for k, v := range env.r {
-		r[k] = v
-	}
-
-	s := make(Types, len(env.s))
-	copy(s, env.s)
-
-	return &SimpleEnv{
-		m: m,
-		s: s,
-		r: r,
+func newInferer(env Env) *inferer {
+	return &inferer{
+		env: env,
 	}
 }
 
-func (env *SimpleEnv) Fresh(t Type) Type {
+func (infer *inferer) Fresh() TypeVariable {
+	retVal := letters[infer.count]
+	infer.count++
+	return TypeVariable(retVal)
+}
+
+func (infer *inferer) lookup(name string) error {
+	s, ok := infer.env.SchemeOf(name)
+	if !ok {
+		return errors.Errorf("Undefined %v", name)
+	}
+	infer.t = Instantiate(infer, s)
+	return nil
+}
+
+func (infer *inferer) consGen(expr Expression) (err error) {
+	if et, ok := expr.(Typer); ok {
+		if infer.t = et.Type(); infer.t != nil {
+			return nil
+		}
+	}
+
+	switch et := expr.(type) {
+	case Literal:
+		return infer.lookup(et.Name())
+
+	case Var:
+		if err = infer.lookup(et.Name()); err != nil {
+			infer.env.Add(et.Name(), &Scheme{t: et.Type()})
+			err = nil
+		}
+
+	case Lambda:
+		tv := infer.Fresh()
+		env := infer.env // backup
+
+		infer.env = infer.env.Clone()
+		infer.env.Remove(et.Name())
+		sc := new(Scheme)
+		sc.t = tv
+		infer.env.Add(et.Name(), sc)
+
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of %v. Body: %v", et, et.Body())
+		}
+
+		infer.t = NewFnType(tv, infer.t)
+		infer.env = env // restore backup
+
+	case Apply:
+		if err = infer.consGen(et.Fn()); err != nil {
+			return errors.Wrapf(err, "Unable to infer Fn of Apply: %v. Fn: %v", et, et.Fn())
+		}
+		fnType, fnCs := infer.t, infer.cs
+
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of Apply: %v. Body: %v", et, et.Body())
+		}
+		bodyType, bodyCs := infer.t, infer.cs
+
+		tv := infer.Fresh()
+		cs := append(fnCs, bodyCs...)
+		cs = append(cs, Constraint{fnType, NewFnType(bodyType, tv)})
+
+		infer.t = tv
+		infer.cs = cs
+
+	case LetRec:
+		tv := infer.Fresh()
+		// env := infer.env // backup
+
+		infer.env = infer.env.Clone()
+		infer.env.Remove(et.Name())
+		infer.env.Add(et.Name(), &Scheme{tvs: TypeVarSet{tv}, t: tv})
+
+		if err = infer.consGen(et.Def()); err != nil {
+			return errors.Wrapf(err, "Unable to infer the definition of a letRec %v. Def: %v", et, et.Def())
+		}
+		defType, defCs := infer.t, infer.cs
+
+		s := newSolver()
+		s.solve(defCs)
+		if s.err != nil {
+			return errors.Wrapf(s.err, "Unable to solve constraints of def: %v", defCs)
+		}
+
+		sc := Generalize(infer.env.Apply(s.sub).(Env), defType.Apply(s.sub).(Type))
+
+		infer.env.Remove(et.Name())
+		infer.env.Add(et.Name(), sc)
+
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of letRec %v. Body: %v", et, et.Body())
+		}
+
+		infer.t = infer.t.Apply(s.sub).(Type)
+		infer.cs = infer.cs.Apply(s.sub).(Constraints)
+		infer.cs = append(infer.cs, defCs...)
+
+	case Let:
+		env := infer.env
+
+		if err = infer.consGen(et.Def()); err != nil {
+			return errors.Wrapf(err, "Unable to infer the definition of a let %v. Def: %v", et, et.Def())
+		}
+		defType, defCs := infer.t, infer.cs
+
+		s := newSolver()
+		s.solve(defCs)
+		if s.err != nil {
+			return errors.Wrapf(s.err, "Unable to solve for the constraints of a def %v", defCs)
+		}
+
+		sc := Generalize(env.Apply(s.sub).(Env), defType.Apply(s.sub).(Type))
+		infer.env = infer.env.Clone()
+		infer.env.Remove(et.Name())
+		infer.env.Add(et.Name(), sc)
+
+		if err = infer.consGen(et.Body()); err != nil {
+			return errors.Wrapf(err, "Unable to infer body of let %v. Body: %v", et, et.Body())
+		}
+
+		infer.t = infer.t.Apply(s.sub).(Type)
+		infer.cs = infer.cs.Apply(s.sub).(Constraints)
+		infer.cs = append(infer.cs, defCs...)
+
+	}
+
+	return nil
+}
+
+// Instantiate takes a fresh name generator, an a polytype and makes a concrete type out of it.
+//
+// If ...
+// 		  Γ ⊢ e: T1  T1 ⊑ T
+//		----------------------
+//		       Γ ⊢ e: T
+//
+func Instantiate(f Fresher, s *Scheme) Type {
+	l := len(s.tvs)
+	tvs := make(TypeVarSet, l)
+
+	var sub Subs
+	if l > 30 {
+		sub = make(mSubs)
+	} else {
+		sub = newSliceSubs(l)
+	}
+
+	for i, tv := range s.tvs {
+		fr := f.Fresh()
+		tvs[i] = fr
+		sub = sub.Add(tv, fr)
+	}
+
+	return s.t.Apply(sub).(Type)
+}
+
+// Generalize takes an env and a type and creates the most general possible type - which is a polytype
+//
+// Generalization
+//
+// If ...
+//		  Γ ⊢ e: T1  T1 ∉ free(Γ)
+//		---------------------------
+//		   Γ ⊢ e: ∀ α.T1
+func Generalize(env Env, t Type) *Scheme {
+	logf("generalizing %v over %v", t, env)
 	enterLoggingContext()
 	defer leaveLoggingContext()
-	// since TypeVariable cannot be a map key, we'll not use a map and use two slices to keep track of mapping instead
-	retVal := env.fresh(t)
-	return retVal
-}
+	var envFree, tFree, diff TypeVarSet
 
-// recursively creates a fresh type
-func (env *SimpleEnv) fresh(t Type) (freshType Type) {
-	enterLoggingContext()
-	defer leaveLoggingContext()
+	if env != nil {
+		envFree = env.FreeTypeVar()
+	}
 
-	switch p := Prune(t).(type) {
-	case *TypeVariable:
-		if env.s.Contains(p) {
-			return p
-		}
+	tFree = t.FreeTypeVar()
 
-		if tv, ok := env.r[p]; ok {
-			return tv
-		}
-		tv := NewTypeVar(randomStr(5))
-		env.r[p] = tv
-		env.r[tv] = tv
-		return tv
-	case TypeConst:
-		return p.Clone()
-	case TypeOp:
-		pts := p.Types()
-		if len(pts) == 1 {
-			defer ReturnTypes1(pts)
-		}
+	switch {
+	case envFree == nil && tFree == nil:
+		goto ret
+	case len(envFree) > 0 && len(tFree) > 0:
+		defer ReturnTypeVarSet(envFree)
+		defer ReturnTypeVarSet(tFree)
+	case len(envFree) > 0 && len(tFree) == 0:
+		// cannot return envFree because envFree will just be sorted and set
+	case len(envFree) == 0 && len(tFree) > 0:
+		// return ?
+	}
 
-		ts := make(Types, len(pts))
-		for i, tt := range pts {
-			ts[i] = env.fresh(tt)
-		}
+	diff = tFree.Difference(envFree)
 
-		return p.New(ts...)
-
-	default:
-		panic("Not implemented yet")
+ret:
+	return &Scheme{
+		tvs: diff,
+		t:   t,
 	}
 }
 
+// Infer takes an env, and an expression, and returns a scheme.
+//
 // The Infer function is the core of the HM type inference system. This is a reference implementation and is completely servicable, but not quite performant.
 // You should use this as a reference and write your own infer function.
 //
@@ -194,109 +260,136 @@ func (env *SimpleEnv) fresh(t Type) (freshType Type) {
 //		--------------------------------
 //		     Γ ⊢ let x = e1 in e2: T2
 //
-// Instantiation
-//
-// If ...
-// 		  Γ ⊢ e: T1  T1 ⊑ T
-//		----------------------
-//		       Γ ⊢ e: T
-//
-// Generalization
-//
-// If ...
-//		  Γ ⊢ e: T1  T1 ∉ free(Γ)
-//		---------------------------
-//		   Γ ⊢ e: ∀ α.T1
-func Infer(node Node, env Env) (retVal Type, err error) {
-	var ok bool
-
-	// if the node knows its own type...
-	var typer Typer
-	if typer, ok = node.(Typer); ok {
-		// and if the type isn't nil...
-		if retVal = typer.Type(); retVal != nil {
-			return
-		}
+func Infer(env Env, expr Expression) (*Scheme, error) {
+	infer := newInferer(env)
+	if err := infer.consGen(expr); err != nil {
+		return nil, err
 	}
 
-	switch n := node.(type) {
-	case Lit:
-		return env.TypeOf(n.Name())
-	case Var:
-		if retVal, err = env.TypeOf(n.Name()); err != nil {
-			// add to env
-			env.Add(n.Name(), n.Type())
-			return n.Type(), nil
-		}
-		return
-	case Lambda:
-		argType := NewTypeVar(randomStr(5))
-		scope := env.Clone()
-		scope = scope.Add(n.Name(), argType)
-		scope = scope.AddConcreteVar(argType)
+	s := newSolver()
+	s.solve(infer.cs)
 
-		if retVal, err = Infer(n.Body(), scope); err != nil {
-			return
+	if s.err != nil {
+		return nil, s.err
+	}
+	t := infer.t.Apply(s.sub).(Type)
+	return closeOver(t)
+}
+
+// Unify unifies the two types and returns a list of substitutions.
+// These are the rules:
+//
+// Type Constants and Type Constants
+//
+// Type constants (atomic types) have no substitution
+//		c ~ c : []
+//
+// Type Variables and Type Variables
+//
+// Type variables have no substitutions if there are no instances:
+// 		a ~ a : []
+//
+// Default Unification
+//
+// if type variable 'a' is not in 'T', then unification is simple: replace all instances of 'a' with 'T'
+// 		     a ∉ T
+//		---------------
+//		 a ~ T : [a/T]
+//
+func Unify(a, b Type) (sub Subs, err error) {
+	logf("%v ~ %v", a, b)
+	enterLoggingContext()
+	defer leaveLoggingContext()
+
+	switch at := a.(type) {
+	case TypeVariable:
+		return bind(at, b)
+	default:
+		if a.Eq(b) {
+			return nil, nil
 		}
 
-		if replacement, ok := scope.Replacements()[argType]; ok {
-			retVal = NewFnType(replacement, retVal)
+		if btv, ok := b.(TypeVariable); ok {
+			return bind(btv, a)
+		}
+		atypes := a.Types()
+		btypes := b.Types()
+		defer ReturnTypes(atypes)
+		defer ReturnTypes(btypes)
+
+		if len(atypes) == 0 && len(btypes) == 0 {
+			goto e
+		}
+
+		return unifyMany(atypes, btypes)
+
+	e:
+	}
+	err = errors.Errorf("Unification Fail: %v ~ %v cannot be unified", a, b)
+	return
+}
+
+func unifyMany(a, b Types) (sub Subs, err error) {
+	logf("UnifyMany %v %v", a, b)
+	enterLoggingContext()
+	defer leaveLoggingContext()
+
+	if len(a) != len(b) {
+		return nil, errors.Errorf("Unequal length. a: %v b %v", a, b)
+	}
+
+	for i, at := range a {
+		bt := b[i]
+
+		if sub != nil {
+			at = at.Apply(sub).(Type)
+			bt = bt.Apply(sub).(Type)
+		}
+
+		var s2 Subs
+		if s2, err = Unify(at, bt); err != nil {
+			return nil, err
+		}
+
+		if sub == nil {
+			sub = s2
 		} else {
-			retVal = NewFnType(argType, retVal)
+			sub2 := compose(sub, s2)
+			defer ReturnSubs(s2)
+			if sub2 != sub {
+				defer ReturnSubs(sub)
+			}
+			sub = sub2
 		}
-
-		return
-	case Apply:
-		var fnType Type
-		if fnType, err = Infer(n.Fn(), env); err != nil {
-			return
-		}
-
-		var arg Type
-		if arg, err = Infer(n.Body(), env); err != nil {
-			return
-		}
-		retVal = NewTypeVar(randomStr(5))
-
-		fn := NewFnType(arg, retVal)
-
-		if _, _, err = Unify(fn, fnType); err != nil {
-			return
-		}
-
-		retVal = Prune(retVal)
-
-	case LetRec:
-		var tmp Type
-		tmp = NewTypeVar(randomStr(5))
-		scope := env.Clone()
-		scope = scope.Add(n.Name(), tmp)
-		scope = scope.AddConcreteVar(tmp.(*TypeVariable))
-
-		var def Type
-		if def, err = Infer(n.Def(), scope); err != nil {
-			return
-		}
-
-		if _, _, err = Unify(tmp, def); err != nil {
-			return
-		}
-
-		scope = scope.Add(n.Name(), tmp)
-		return Infer(n.Body(), scope)
-
-	case Let:
-		var def Type
-		if def, err = Infer(n.Def(), env); err != nil {
-			return
-		}
-
-		scope := env.Clone()
-		scope = scope.Add(n.Name(), def)
-
-		return Infer(n.Body(), scope)
-	case UntypedNode:
-
 	}
+	return
+}
+
+func bind(tv TypeVariable, t Type) (sub Subs, err error) {
+	logf("Binding %v to %v", tv, t)
+	switch {
+	// case tv == t:
+	case occurs(tv, t):
+		err = errors.Errorf("recursive unification")
+	default:
+		ssub := BorrowSSubs(1)
+		ssub.s[0] = Substitution{tv, t}
+		sub = ssub
+	}
+	logf("Sub %v", sub)
+	return
+}
+
+func occurs(tv TypeVariable, s Substitutable) bool {
+	ftv := s.FreeTypeVar()
+	defer ReturnTypeVarSet(ftv)
+
+	return ftv.Contains(tv)
+}
+
+func closeOver(t Type) (sch *Scheme, err error) {
+	sch = Generalize(nil, t)
+	err = sch.normalize()
+	logf("closeoversch: %v", sch)
 	return
 }

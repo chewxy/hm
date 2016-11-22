@@ -2,147 +2,153 @@ package hm
 
 import "sync"
 
-var (
-	fnPool = true
-	tsPool = true
-	tvPool = true
-
-	fnPoolGuard = new(sync.Mutex)
-	tsPoolGuard = new(sync.Mutex)
-	tvPoolGuard = new(sync.Mutex)
+const (
+	poolSize = 4
+	extraCap = 2
 )
 
-func init() {
-	// fntypePool.New = func() interface{} { return new(FunctionType) }
-	// types1Pool.New = func() interface{} { return make(Types, 1, 1) }
-	// typeVarPool.New = func() interface{} { return new(TypeVariable) }
+var sSubPool = [poolSize]*sync.Pool{
+	&sync.Pool{
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 1, 1+extraCap)} },
+	},
+	&sync.Pool{
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 2, 2+extraCap)} },
+	},
+	&sync.Pool{
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 3, 3+extraCap)} },
+	},
+	&sync.Pool{
+		New: func() interface{} { return &sSubs{s: make([]Substitution, 4, 4+extraCap)} },
+	},
 }
 
-// DontUseFnPool ensures that the pool won't be used
-func DontUseFnPool() { fnPoolGuard.Lock(); fnPool = false; fnPoolGuard.Unlock() }
+var mSubPool = &sync.Pool{
+	New: func() interface{} { return make(mSubs) },
+}
 
-// UseFnPool ensures that the pool for *FunctionType will be used
-func UseFnPool() { fnPoolGuard.Lock(); fnPool = true; fnPoolGuard.Unlock() }
+func ReturnSubs(sub Subs) {
+	switch s := sub.(type) {
+	case mSubs:
+		for k := range s {
+			delete(s, k)
+		}
+		mSubPool.Put(sub)
+	case *sSubs:
+		size := cap(s.s) - 2
+		if size > 0 && size < poolSize+1 {
+			// reset to empty
+			for i := range s.s {
+				s.s[i] = Substitution{}
+			}
 
-// IsUsingFnPool returns whether the *FunctionType pool is being used
-func IsUsingFnPool() bool { return fnPool }
+			s.s = s.s[:size]
+			sSubPool[size-1].Put(sub)
+		}
+	}
+}
 
-// DontUseTsPool ensures that the Types pool for sizes 1 won't be used
-func DontUseTsPool() { tsPoolGuard.Lock(); tsPool = false; tsPoolGuard.Unlock() }
+func BorrowMSubs() mSubs {
+	return mSubPool.Get().(mSubs)
+}
 
-// UseFnPool ensures that the pool for Types with size 1 will be used
-func UseTsPool() { tsPoolGuard.Lock(); tsPool = true; tsPoolGuard.Unlock() }
+func BorrowSSubs(size int) *sSubs {
+	if size > 0 && size < 5 {
+		retVal := sSubPool[size-1].Get().(*sSubs)
+		return retVal
+	}
+	s := make([]Substitution, size)
+	return &sSubs{s: s}
+}
 
-// IsUsingTsPool returns whether the pool for Types with size 1 is being used
-func IsUsingTsPool() bool { return tsPool }
+var typesPool = [poolSize]*sync.Pool{
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 1) },
+	},
 
-// DontUseTvPool ensures that the pool for *TypeVariable won't be used
-func DontUseTvPool() { tvPoolGuard.Lock(); tvPool = false; tvPoolGuard.Unlock() }
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 2) },
+	},
 
-// UseFnPool ensures that the pool for *TypeVariable will be used
-func UseTvPool() { tvPoolGuard.Lock(); tvPool = true; tvPoolGuard.Unlock() }
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 3) },
+	},
 
-// IsUsingTvPool returns whether the pool for *TypeVariable is being used
-func IsUsingTvPool() bool { return tvPool }
+	&sync.Pool{
+		New: func() interface{} { return make(Types, 4) },
+	},
+}
 
-// var fntypePool = new(sync.Pool)
+func BorrowTypes(size int) Types {
+	if size > 0 && size < poolSize+1 {
+		return typesPool[size-1].Get().(Types)
+	}
+	return make(Types, size)
+}
 
-var fntypePool = &sync.Pool{
+func ReturnTypes(ts Types) {
+	if size := cap(ts); size > 0 && size < poolSize+1 {
+		ts = ts[:cap(ts)]
+		for i := range ts {
+			ts[i] = nil
+		}
+		typesPool[size-1].Put(ts)
+	}
+}
+
+var typeVarSetPool = [poolSize]*sync.Pool{
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 1) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 2) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 3) },
+	},
+
+	&sync.Pool{
+		New: func() interface{} { return make(TypeVarSet, 4) },
+	},
+}
+
+func BorrowTypeVarSet(size int) TypeVarSet {
+	if size > 0 && size < poolSize+1 {
+		return typeVarSetPool[size-1].Get().(TypeVarSet)
+	}
+	return make(TypeVarSet, size)
+}
+
+func ReturnTypeVarSet(ts TypeVarSet) {
+	var def TypeVariable
+	if size := cap(ts); size > 0 && size < poolSize+1 {
+		ts = ts[:cap(ts)]
+		for i := range ts {
+			ts[i] = def
+		}
+		typeVarSetPool[size-1].Put(ts)
+	}
+}
+
+var fnTypePool = &sync.Pool{
 	New: func() interface{} { return new(FunctionType) },
 }
 
 func borrowFnType() *FunctionType {
-	return fntypePool.Get().(*FunctionType)
+	return fnTypePool.Get().(*FunctionType)
 }
 
-func ReturnFnType(t *FunctionType) {
-	logf("returning FnType")
-	enterLoggingContext()
-	defer leaveLoggingContext()
-
-	switch t0t := t.ts[0].(type) {
-	case *FunctionType:
-		ReturnFnType(t0t)
-	case *TypeVariable:
-		logf("Going to return t0t %p", t0t)
-		ReturnTypeVar(t0t)
+func ReturnFnType(fnt *FunctionType) {
+	if a, ok := fnt.a.(*FunctionType); ok {
+		ReturnFnType(a)
 	}
 
-	switch t1t := t.ts[1].(type) {
-	case *FunctionType:
-		ReturnFnType(t1t)
-	case *TypeVariable:
-		logf("Going to return t1t %p", t1t)
-		ReturnTypeVar(t1t)
+	if b, ok := fnt.b.(*FunctionType); ok {
+		ReturnFnType(b)
 	}
 
-	t.ts[0] = nil
-	t.ts[1] = nil
-
-	fntypePool.Put(t)
+	fnt.a = nil
+	fnt.b = nil
+	fnTypePool.Put(fnt)
 }
-
-// pool for Types with size of 1
-
-var types1Pool = &sync.Pool{
-	New: func() interface{} { return make(Types, 1, 1) },
-}
-
-// var types1Pool = new(sync.Pool)
-
-func BorrowTypes1() Types {
-	return types1Pool.Get().(Types)
-}
-
-func ReturnTypes1(ts Types) {
-	ts[0] = nil
-	types1Pool.Put(ts)
-}
-
-// pool for typevar
-// we also keep track of the used TypeVariables
-
-// var typeVarPool = new(sync.Pool)
-
-var typeVarPool = &sync.Pool{
-	New: func() interface{} { return new(TypeVariable) },
-}
-var typeVarLock = new(sync.Mutex)
-var usedTypeVars = make(map[*TypeVariable]struct{})
-
-func borrowTypeVar() *TypeVariable {
-	typeVarLock.Lock()
-	tv := typeVarPool.Get().(*TypeVariable)
-	usedTypeVars[tv] = struct{}{}
-	logf("borrowing tv %p %v", tv, tv)
-	typeVarLock.Unlock()
-	return tv
-}
-
-func ReturnTypeVar(tv *TypeVariable) {
-	logf("returning tv %p %v", tv, tv)
-	enterLoggingContext()
-	defer leaveLoggingContext()
-
-	typeVarLock.Lock()
-
-	if _, ok := usedTypeVars[tv]; !ok {
-		typeVarLock.Unlock()
-		return
-	}
-	delete(usedTypeVars, tv)
-	typeVarLock.Unlock()
-
-	switch tit := tv.instance.(type) {
-	case *TypeVariable:
-		ReturnTypeVar(tit)
-	case *FunctionType:
-		ReturnFnType(tit)
-	}
-	tv.name = ""
-	tv.instance = nil
-	typeVarPool.Put(tv)
-
-}
-
-// handles Returning of Values

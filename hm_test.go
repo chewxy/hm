@@ -1,98 +1,146 @@
 package hm
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestSimpleEnvBasicst(t *testing.T) {
-
-}
-
-func TestSimpleEnv_Fresh(t *testing.T) {
-	assert := assert.New(t)
-	var fresh Type
-	var t0 Type
-	env := NewSimpleEnv()
-
-	fresh = env.Fresh(proton)
-	assert.Equal(proton, fresh)
-
-	t0 = NewTypeVar("a")
-	fresh = env.Fresh(t0)
-	assert.NotEqual(t0.Name(), fresh.Name())
-
-	m := map[string]Type{
-		"quarks":   list{quark},
-		"electron": electron,
-	}
-	concrete := Types{
-		NewTypeVar("a"),
-	}
-	env = NewSimpleEnv(WithDict(m), WithConcreteVars(concrete))
-	assert.Equal(concrete, env.ConcreteVars())
-
-	t0 = NewTypeVar("a")
-	assert.Equal(t0, env.Fresh(t0))
-}
-
-// to test infer, we'll just borrow the definitions from the greenspun example
-var infer1 []struct {
+var unifyTests = []struct {
 	name string
+	a    Type
+	b    Type
 
-	node    Node
-	correct Type
-	err     bool
+	subs Subs
+	err  bool // does it error?
+}{
+	{"a ~ a (recursive unification)", TypeVariable('a'), TypeVariable('a'), nil, true},
+	{"a ~ b", TypeVariable('a'), TypeVariable('b'), mSubs{'a': TypeVariable('b')}, false},
+	{"a ~ proton", TypeVariable('a'), proton, mSubs{'a': proton}, false},
+	{"proton ~ a", proton, TypeVariable('a'), mSubs{'a': proton}, false},
+
+	// typeconst ~ typeconst
+	{"proton ~ proton", proton, proton, nil, false},
+	{"proton ~ neutron", proton, neutron, nil, true},
+	{"List a ~ List proton", list{TypeVariable('a')}, list{proton}, mSubs{'a': proton}, false},
+
+	// function types
+	{"List a → List a ~ List proton → List proton",
+		NewFnType(list{TypeVariable('a')}, list{TypeVariable('a')}),
+		NewFnType(list{proton}, list{proton}),
+		mSubs{'a': proton}, false},
+	{"List proton → List proton ~ List a → List a",
+		NewFnType(list{proton}, list{proton}),
+		NewFnType(list{TypeVariable('a')}, list{TypeVariable('a')}),
+		mSubs{'a': proton}, false},
+	{"List a → a ~ List proton → proton",
+		NewFnType(list{TypeVariable('a')}, TypeVariable('a')),
+		NewFnType(list{proton}, proton),
+		mSubs{'a': proton}, false},
+	{"List proton → proton ~ List a → a ",
+		NewFnType(list{proton}, proton),
+		NewFnType(list{TypeVariable('a')}, TypeVariable('a')),
+		mSubs{'a': proton}, false},
+	{"List a → a → List a ~ List proton → proton → b",
+		NewFnType(list{TypeVariable('a')}, TypeVariable('a'), list{TypeVariable('a')}),
+		NewFnType(list{proton}, proton, TypeVariable('b')),
+		mSubs{'a': proton, 'b': list{proton}}, false},
 }
 
-func init() {
-	infer1 = []struct {
-		name string
-
-		node    Node
-		correct Type
-		err     bool
-	}{
-		{"Lit", lit("1"), Float, false},
-		{"Undefined Lit", lit("a"), nil, true},
-		{"App", app{lit("+"), lit("1")}, NewFnType(Float, Float), false},
-
-		// have to write helper functions to test these:
-		{"Lambda", λ{"a", app{lit("+"), lit("1")}}, NewFnType(NewTypeVar("∀"), Float, Float), false},
-		{"Lambda (+1)", λ{"a", app{lit("+1"), lit("a")}}, NewFnType(NewTypeVar("∀"), NewTypeVar("∀")), false},
-	}
-}
-
-func TestInfer(t *testing.T) {
-	assert := assert.New(t)
-	var t0 Type
+func TestUnify(t *testing.T) {
+	// assert := assert.New(t)
+	var t0, t1 Type
+	var u0, u1 Type
+	var sub Subs
 	var err error
 
-	p1a := NewTypeVar("a")
-	pa := NewTypeVar("a")
-	m := map[string]Type{
-		"+":  NewFnType(pa, pa, pa),
-		"+1": NewFnType(p1a, p1a),
-	}
-	for _, its := range infer1 {
-		env := NewSimpleEnv(WithDict(m))
-		if t0, err = Infer(its.node, env); (its.err && err == nil) || (!its.err && err != nil) {
-			if its.err {
-				t.Errorf("Test %q: Expected an error", its.name)
-			} else {
-				t.Errorf("Test %q Err: %v", its.name, errors.Cause(err))
+	for _, uts := range unifyTests {
+		// logf("unifying %v", uts.name)
+		t0 = uts.a
+		t1 = uts.b
+		sub, err = Unify(t0, t1)
+
+		switch {
+		case err == nil && uts.err:
+			t.Errorf("Test %q - Expected an error: %v | u0: %#v, u1: %#v", uts.name, err, u0, u1)
+		case err != nil && !uts.err:
+			t.Errorf("Test %q errored: %v ", uts.name, err)
+		}
+
+		if uts.err {
+			continue
+		}
+
+		if uts.subs == nil {
+			if sub != nil {
+				t.Errorf("Test: %q Expected no substitution. Got %v instead", uts.name, sub)
 			}
 			continue
 		}
 
-		if its.err {
-			continue
+		for _, s := range uts.subs.Iter() {
+			if T, ok := sub.Get(s.Tv); !ok {
+				t.Errorf("Test: %q TypeVariable %v expected in result", uts.name, s.Tv)
+			} else if T != s.T {
+				t.Errorf("Test: %q Expected TypeVariable %v to be substituted by %v. Got %v instead", uts.name, s.Tv, s.T, T)
+			}
 		}
 
-		assert.True(typeEqAnyVar(its.correct, t0), "Test : %v Correct: %#v | Got %#v", its.name, its.correct, t0)
+		if uts.subs.Size() != sub.Size() {
+			t.Errorf("Test: %q Expected subs to be the same size", uts.name)
+		}
 
-		// assert.True(its.correct.Eq(t0), "Test : %v Correct: %#v | Got %#v", its.name, its.correct, t0)
+		sub = nil
 	}
+}
+
+var inferTests = []struct {
+	name string
+
+	expr       Expression
+	correct    Type
+	correctTVS TypeVarSet
+	err        bool
+}{
+	{"Lit", lit("1"), Float, nil, false},
+	{"Undefined Lit", lit("a"), nil, nil, true},
+	{"App", app{lit("+"), lit("1")}, NewFnType(Float, Float), nil, false},
+
+	{"Lambda", λ{"n", app{lit("+"), lit("1")}}, NewFnType(TypeVariable('a'), Float, Float), TypeVarSet{'a'}, false},
+	{"Lambda (+1)", λ{"a", app{lit("+1"), lit("a")}}, NewFnType(TypeVariable('a'), TypeVariable('a')), TypeVarSet{'a'}, false},
+}
+
+func TestInfer(t *testing.T) {
+	env := SimpleEnv{
+		"+":  &Scheme{tvs: TypeVarSet{'a'}, t: NewFnType(TypeVariable('a'), TypeVariable('a'), TypeVariable('a'))},
+		"+1": &Scheme{tvs: TypeVarSet{'a'}, t: NewFnType(TypeVariable('a'), TypeVariable('a'))},
+	}
+
+	for _, its := range inferTests {
+
+		sch, err := Infer(env, its.expr)
+
+		if its.err {
+			if err == nil {
+				t.Errorf("Test %q : Expected error. %v", its.name, sch)
+			}
+			continue
+		} else {
+			if err != nil {
+				t.Errorf("Test %q Error: %v", its.name, err)
+			}
+		}
+
+		if !sch.t.Eq(its.correct) {
+			t.Errorf("Test %q: Expected %v. Got %v", its.name, its.correct, sch.t)
+		}
+
+		for _, tv := range its.correctTVS {
+			if !sch.tvs.Contains(tv) {
+				t.Errorf("Test %q: Expected %v to be in the scheme.", tv)
+				break
+			}
+		}
+
+		if len(its.correctTVS) != len(sch.tvs) {
+			t.Errorf("Test %q: Expected scheme to have %v. Got %v instead", its.name, its.correctTVS, sch.tvs)
+		}
+	}
+
 }

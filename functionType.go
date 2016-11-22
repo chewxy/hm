@@ -4,127 +4,62 @@ import "fmt"
 
 // FunctionType is a type constructor that builds function types.
 type FunctionType struct {
-	ts [2]Type // from → to
+	a, b Type
 }
 
-// NewFnType creates a new *FunctionType
-func NewFnType(params ...Type) *FunctionType {
-	if len(params) < 2 {
-		panic(fmt.Sprintf("Needs more than 2 params to make a function. Got %v", params))
+// NewFnType creates a new FunctionType. Functions are by default right associative. This:
+//		NewFnType(a, a, a)
+// is short hand for this:
+// 		NewFnType(a, NewFnType(a, a))
+func NewFnType(ts ...Type) *FunctionType {
+	if len(ts) < 2 {
+		panic("Expected at least 2 input types")
 	}
 
-	t := borrowFnType()
-	t.ts[0] = params[0]
-	if len(params) == 2 {
-		t.ts[1] = params[1]
-		return t
-	}
+	retVal := borrowFnType()
+	retVal.a = ts[0]
 
-	t.ts[1] = NewFnType(params[1:]...)
-	return t
-}
-
-/* Type interface fulfilment */
-
-func (t *FunctionType) Name() string { return "→" }
-
-func (t *FunctionType) Contains(tv *TypeVariable) bool {
-	for _, ty := range t.ts {
-		if ty.Contains(tv) {
-			return true
-		}
-	}
-	return false
-}
-
-func (t *FunctionType) Eq(other Type) bool {
-	oft, ok := other.(*FunctionType)
-	if !ok {
-		return false
-	}
-
-	for i, tt := range t.ts {
-		if !tt.Eq(oft.ts[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func (t *FunctionType) Format(state fmt.State, c rune) {
-	if state.Flag('#') {
-		fmt.Fprintf(state, "%#v → %#v", t.ts[0], t.ts[1])
+	if len(ts) > 2 {
+		retVal.b = NewFnType(ts[1:]...)
 	} else {
-		fmt.Fprintf(state, "%s → %s", t.ts[0], t.ts[1])
+		retVal.b = ts[1]
 	}
-}
-
-func (t *FunctionType) String() string { return fmt.Sprintf("%v", t) }
-
-func (t *FunctionType) Prune() Type {
-	if tv, ok := t.ts[0].(*TypeVariable); ok {
-		t.ts[0] = Prune(tv)
-	}
-	if tv, ok := t.ts[1].(*TypeVariable); ok {
-		t.ts[1] = Prune(tv)
-	}
-	return t
-}
-
-/* TypeOp interface fulfilment */
-
-func (t *FunctionType) Types() Types { return Types(t.ts[:]) }
-
-func (t *FunctionType) Clone() TypeOp {
-	retVal := new(FunctionType)
-
-	switch tt := t.ts[0].(type) {
-	case *TypeVariable:
-		retVal.ts[0] = tt
-	case TypeConst:
-		retVal.ts[0] = tt
-	case TypeOp:
-		retVal.ts[0] = tt.Clone()
-	default:
-		panic("What")
-	}
-
-	switch tt := t.ts[1].(type) {
-	case *TypeVariable:
-		retVal.ts[1] = tt
-	case TypeConst:
-		retVal.ts[1] = tt
-	case TypeOp:
-		retVal.ts[1] = tt.Clone()
-	default:
-		panic("What")
-	}
-
 	return retVal
 }
 
-func (t *FunctionType) New(ts ...Type) TypeOp {
-	return NewFnType(ts...)
+func (t *FunctionType) Name() string { return "→" }
+func (t *FunctionType) Apply(sub Subs) Substitutable {
+	t.a = t.a.Apply(sub).(Type)
+	t.b = t.b.Apply(sub).(Type)
+	return t
 }
 
-/* Useful methods */
-
-// TypesRec is like Types(), but recursively gets more Types. This is often used to get the return type of a function
-func (t *FunctionType) TypesRec() (retVal Types) {
-	for _, tt := range t.ts {
-		if fn, ok := tt.(*FunctionType); ok {
-			retVal = append(retVal, fn.TypesRec()...)
-			continue
-		}
-		retVal = append(retVal, tt)
+func (t *FunctionType) FreeTypeVar() TypeVarSet    { return t.a.FreeTypeVar().Union(t.b.FreeTypeVar()) }
+func (t *FunctionType) Format(s fmt.State, c rune) { fmt.Fprintf(s, "%v → %v", t.a, t.b) }
+func (t *FunctionType) String() string             { return fmt.Sprintf("%v", t) }
+func (t *FunctionType) Normalize(k, v TypeVarSet) (Type, error) {
+	var a, b Type
+	var err error
+	if a, err = t.a.Normalize(k, v); err != nil {
+		return nil, err
 	}
-	return
+
+	if b, err = t.b.Normalize(k, v); err != nil {
+		return nil, err
+	}
+
+	return NewFnType(a, b), nil
+}
+func (t *FunctionType) Types() Types {
+	retVal := BorrowTypes(2)
+	retVal[0] = t.a
+	retVal[1] = t.b
+	return retVal
 }
 
-// ReturnType is the specialization of TypesRec(), specialized for finding return types
-func (t *FunctionType) ReturnType() Type {
-	if fn, ok := t.ts[1].(*FunctionType); ok {
-		return fn.ReturnType()
+func (t *FunctionType) Eq(other Type) bool {
+	if ot, ok := other.(*FunctionType); ok {
+		return ot.a.Eq(t.a) && ot.b.Eq(t.b)
 	}
-	return t.ts[1]
+	return false
 }
