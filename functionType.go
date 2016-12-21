@@ -63,3 +63,21 @@ func (t *FunctionType) Eq(other Type) bool {
 	}
 	return false
 }
+
+// Other methods (accessors mainly)
+
+// Arg returns the type of the function argument
+func (t *FunctionType) Arg() Type { return t.a }
+
+// Ret returns the return type of a function. If recursive is true, it will get the final return type
+func (t *FunctionType) Ret(recursive bool) Type {
+	if !recursive {
+		return t.b
+	}
+
+	if fnt, ok := t.b.(*FunctionType); ok {
+		return fnt.Ret(recursive)
+	}
+
+	return t.b
+}

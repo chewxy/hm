@@ -16,6 +16,24 @@ func TestFunctionTypeBasics(t *testing.T) {
 		t.Errorf("Expected \"a → a → a\". Got %q instead", fnType.String())
 	}
 
+	if !fnType.Arg().Eq(TypeVariable('a')) {
+		t.Error("Expected arg of function to be 'a'")
+	}
+
+	if !fnType.Ret(false).Eq(NewFnType(TypeVariable('a'), TypeVariable('a'))) {
+		t.Error("Expected ret(false) to be a → a")
+	}
+
+	if !fnType.Ret(true).Eq(TypeVariable('a')) {
+		t.Error("Expected final return type to be 'a'")
+	}
+
+	// a very simple fn
+	fnType = NewFnType(TypeVariable('a'), TypeVariable('a'))
+	if !fnType.Ret(true).Eq(TypeVariable('a')) {
+		t.Error("Expected final return type to be 'a'")
+	}
+
 	ftv := fnType.FreeTypeVar()
 	if len(ftv) != 1 {
 		t.Errorf("Expected only one free type var")
