@@ -60,6 +60,7 @@ func (s *Scheme) Type() (t Type, isMonoType bool) {
 	return s.t, false
 }
 
+// Normalize normalizes the type variables in  a scheme, so all the names will be in alphabetical order
 func (s *Scheme) Normalize() (err error) {
 	tfv := s.t.FreeTypeVar()
 

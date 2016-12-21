@@ -104,6 +104,8 @@ var inferTests = []struct {
 
 	{"Lambda", λ{"n", app{lit("+"), lit("1")}}, NewFnType(TypeVariable('a'), Float, Float), TypeVarSet{'a'}, false},
 	{"Lambda (+1)", λ{"a", app{lit("+1"), lit("a")}}, NewFnType(TypeVariable('a'), TypeVariable('a')), TypeVarSet{'a'}, false},
+
+	{"nil expr", nil, nil, nil, true},
 }
 
 func TestInfer(t *testing.T) {
@@ -141,6 +143,16 @@ func TestInfer(t *testing.T) {
 		if len(its.correctTVS) != len(sch.tvs) {
 			t.Errorf("Test %q: Expected scheme to have %v. Got %v instead", its.name, its.correctTVS, sch.tvs)
 		}
+	}
+
+	// test without env
+	its := inferTests[0]
+	sch, err := Infer(nil, its.expr)
+	if err != nil {
+		t.Errorf("Testing a nil Env. Shouldn't have errored. Got err:  %v", err)
+	}
+	if !sch.t.Eq(its.correct) {
+		t.Errorf("Testing nil Env. Expected %v to be in the scheme. Got scheme %v instead", its.correct, sch)
 	}
 
 }

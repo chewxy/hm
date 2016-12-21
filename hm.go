@@ -147,6 +147,8 @@ func (infer *inferer) consGen(expr Expression) (err error) {
 		infer.cs = infer.cs.Apply(s.sub).(Constraints)
 		infer.cs = append(infer.cs, defCs...)
 
+	default:
+		return errors.Errorf("Expression of %T is unhandled", expr)
 	}
 
 	return nil
@@ -261,6 +263,14 @@ ret:
 //		     Γ ⊢ let x = e1 in e2: T2
 //
 func Infer(env Env, expr Expression) (*Scheme, error) {
+	if expr == nil {
+		return nil, errors.Errorf("Cannot infer a nil expression")
+	}
+
+	if env == nil {
+		env = make(SimpleEnv)
+	}
+
 	infer := newInferer(env)
 	if err := infer.consGen(expr); err != nil {
 		return nil, err

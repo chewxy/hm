@@ -44,3 +44,19 @@ func TestConstraints(t *testing.T) {
 	}
 
 }
+
+func TestTypes_Contains(t *testing.T) {
+	ts := Types{TypeVariable('a'), proton}
+
+	if !ts.Contains(TypeVariable('a')) {
+		t.Error("Expected ts to contain 'a'")
+	}
+
+	if !ts.Contains(proton) {
+		t.Error("Expected ts to contain proton")
+	}
+
+	if ts.Contains(neutron) {
+		t.Error("ts shouldn't contain neutron")
+	}
+}

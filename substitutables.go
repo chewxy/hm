@@ -45,6 +45,15 @@ func (cs Constraints) Format(state fmt.State, c rune) {
 
 type Types []Type
 
+func (ts Types) Contains(t Type) bool {
+	for _, T := range ts {
+		if t.Eq(T) {
+			return true
+		}
+	}
+	return false
+}
+
 // func (ts Types) Apply(sub Subs) Substitutable {
 // 	for i, t := range ts {
 // 		ts[i] = t.Apply(sub).(Type)

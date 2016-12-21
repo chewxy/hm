@@ -59,7 +59,7 @@ func TestSchemeNormalize(t *testing.T) {
 	s.tvs = TypeVarSet{'c', 'z', 'd'}
 	s.t = NewFnType(TypeVariable('a'), TypeVariable('c'))
 
-	err := s.normalize()
+	err := s.Normalize()
 	if err != nil {
 		t.Error(err)
 	}
