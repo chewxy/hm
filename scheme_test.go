@@ -16,7 +16,12 @@ func TestSchemeBasics(t *testing.T) {
 		'c': electron,
 	}
 
-	s2 := s.Apply(sub).(*Scheme)
+	s2 := s.Apply(nil).(*Scheme)
+	if s2 != s {
+		t.Errorf("Different pointers")
+	}
+
+	s2 = s.Apply(sub).(*Scheme)
 	if s2 != s {
 		t.Errorf("Different pointers")
 	}
