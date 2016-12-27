@@ -10,6 +10,11 @@ type Typer interface {
 	Type() Type
 }
 
+// An Inferer is an Expression that can infer its own Type given an Env
+type Inferer interface {
+	Infer(Env, Fresher) (Type, error)
+}
+
 // An Expression is basically an AST node. In its simplest form, it's lambda calculus
 type Expression interface {
 	Body() Expression

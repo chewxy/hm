@@ -105,6 +105,12 @@ var inferTests = []struct {
 	{"Lambda", λ{"n", app{lit("+"), lit("1")}}, NewFnType(TypeVariable('a'), Float, Float), TypeVarSet{'a'}, false},
 	{"Lambda (+1)", λ{"a", app{lit("+1"), lit("a")}}, NewFnType(TypeVariable('a'), TypeVariable('a')), TypeVarSet{'a'}, false},
 
+	{"Var - found", variable("x"), proton, nil, false},
+	{"Var - notfound", variable("y"), nil, nil, true},
+
+	{"Self Infer - no err", selfInferer(true), proton, nil, false},
+	{"Self Infer - err", selfInferer(false), nil, nil, true},
+
 	{"nil expr", nil, nil, nil, true},
 }
 
@@ -112,10 +118,10 @@ func TestInfer(t *testing.T) {
 	env := SimpleEnv{
 		"+":  &Scheme{tvs: TypeVarSet{'a'}, t: NewFnType(TypeVariable('a'), TypeVariable('a'), TypeVariable('a'))},
 		"+1": &Scheme{tvs: TypeVarSet{'a'}, t: NewFnType(TypeVariable('a'), TypeVariable('a'))},
+		"x":  NewScheme(nil, proton),
 	}
 
 	for _, its := range inferTests {
-
 		sch, err := Infer(env, its.expr)
 
 		if its.err {
@@ -135,7 +141,7 @@ func TestInfer(t *testing.T) {
 
 		for _, tv := range its.correctTVS {
 			if !sch.tvs.Contains(tv) {
-				t.Errorf("Test %q: Expected %v to be in the scheme.", tv)
+				t.Errorf("Test %q: Expected %v to be in the scheme.", its.name, tv)
 				break
 			}
 		}

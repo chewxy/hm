@@ -14,7 +14,7 @@ type Subs interface {
 	Clone() Subs
 }
 
-// A Subsitution is a tuple representing the TypeVariable and the replacement Type
+// A Substitution is a tuple representing the TypeVariable and the replacement Type
 type Substitution struct {
 	Tv TypeVariable
 	T  Type

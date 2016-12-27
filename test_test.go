@@ -1,6 +1,10 @@
 package hm
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/pkg/errors"
+)
 
 const (
 	proton  TypeConst = "proton"
@@ -66,3 +70,21 @@ func (l mirrorUniverseList) Eq(other Type) bool {
 	}
 	return false
 }
+
+// satisfies the Inferer interface for testing
+type selfInferer bool
+
+func (t selfInferer) Infer(Env, Fresher) (Type, error) {
+	if bool(t) {
+		return proton, nil
+	}
+	return nil, errors.Errorf("fail")
+}
+func (t selfInferer) Body() Expression { panic("not implemented") }
+
+// satisfies the Var interface for testing. It also doesn't know its own type
+type variable string
+
+func (t variable) Body() Expression { return nil }
+func (t variable) Name() string     { return string(t) }
+func (t variable) Type() Type       { return nil }

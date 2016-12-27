@@ -20,6 +20,6 @@ func (c Constraint) FreeTypeVar() TypeVarSet {
 	return retVal
 }
 
-func (cs Constraint) Format(state fmt.State, c rune) {
-	fmt.Fprintf(state, "{%v = %v}", cs.a, cs.b)
+func (c Constraint) Format(state fmt.State, r rune) {
+	fmt.Fprintf(state, "{%v = %v}", c.a, c.b)
 }

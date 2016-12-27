@@ -36,7 +36,7 @@ func TestSolver(t *testing.T) {
 
 		if sts.err {
 			if solver.err == nil {
-				t.Error("Test %d Expected an error", i)
+				t.Errorf("Test %d Expected an error", i)
 			}
 			continue
 		} else if solver.err != nil {

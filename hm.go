@@ -37,11 +37,22 @@ func (infer *inferer) lookup(name string) error {
 }
 
 func (infer *inferer) consGen(expr Expression) (err error) {
-	if et, ok := expr.(Typer); ok {
+
+	// explicit types/inferers - can fail
+	switch et := expr.(type) {
+	case Typer:
 		if infer.t = et.Type(); infer.t != nil {
 			return nil
 		}
+	case Inferer:
+		if infer.t, err = et.Infer(infer.env, infer); err == nil && infer.t != nil {
+			return nil
+		}
+
+		err = nil // reset errors
 	}
+
+	// fallbacks
 
 	switch et := expr.(type) {
 	case Literal:
@@ -282,6 +293,11 @@ func Infer(env Env, expr Expression) (*Scheme, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
+
+	if infer.t == nil {
+		return nil, errors.Errorf("infer.t is nil")
+	}
+
 	t := infer.t.Apply(s.sub).(Type)
 	return closeOver(t)
 }

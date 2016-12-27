@@ -52,7 +52,7 @@ func TestSchemeBasics(t *testing.T) {
 	// Polytype scheme.Type
 	T, isMono := s.Type()
 	if isMono {
-		t.Error("%v is supposed to be a polytype. It shouldn't return true", s)
+		t.Errorf("%v is supposed to be a polytype. It shouldn't return true", s)
 	}
 	if !T.Eq(NewFnType(TypeVariable('c'), proton)) {
 		t.Error("Wrong type returned by scheme")

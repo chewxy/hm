@@ -11,7 +11,7 @@ import (
 )
 
 // DEBUG returns true when it's in debug mode
-const DEBUG = false
+const DEBUG = true
 
 var tabcount uint32
 

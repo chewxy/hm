@@ -6,6 +6,7 @@ import (
 	"github.com/xtgo/set"
 )
 
+// TypeVarSet is a set of TypeVariable
 type TypeVarSet []TypeVariable
 
 // TypeVariables are orderable, so we fulfil the interface for sort.Interface
