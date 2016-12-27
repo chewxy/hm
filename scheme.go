@@ -7,6 +7,13 @@ type Scheme struct {
 	t   Type
 }
 
+func NewScheme(tvs TypeVarSet, t Type) *Scheme {
+	return &Scheme{
+		tvs: tvs,
+		t:   t,
+	}
+}
+
 func (s *Scheme) Apply(sub Subs) Substitutable {
 	logf("s: %v, sub: %v", s, sub)
 	if sub == nil {

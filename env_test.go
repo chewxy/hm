@@ -13,41 +13,41 @@ func TestSimpleEnv(t *testing.T) {
 
 	// Add
 	orig = make(SimpleEnv)
-	orig = orig.Add("foo", &Scheme{
-		tvs: TypeVarSet{'a', 'b', 'c'},
-		t:   TypeVariable('a'),
-	})
-	orig = orig.Add("bar", &Scheme{
-		tvs: TypeVarSet{'b', 'c', 'd'},
-		t:   TypeVariable('a'),
-	})
-	orig = orig.Add("baz", &Scheme{
-		tvs: TypeVarSet{'a', 'b', 'c'},
-		t:   neutron,
-	})
-	qs := &Scheme{
-		tvs: TypeVarSet{'a', 'b'},
-		t:   proton,
-	}
+	orig = orig.Add("foo", NewScheme(
+		TypeVarSet{'a', 'b', 'c'},
+		TypeVariable('a'),
+	))
+	orig = orig.Add("bar", NewScheme(
+		TypeVarSet{'b', 'c', 'd'},
+		TypeVariable('a'),
+	))
+	orig = orig.Add("baz", NewScheme(
+		TypeVarSet{'a', 'b', 'c'},
+		neutron,
+	))
+	qs := NewScheme(
+		TypeVarSet{'a', 'b'},
+		proton,
+	)
 	orig = orig.Add("qux", qs)
 
 	expected = SimpleEnv{
-		"foo": &Scheme{
-			tvs: TypeVarSet{'a', 'b', 'c'},
-			t:   TypeVariable('a'),
-		},
-		"bar": &Scheme{
-			tvs: TypeVarSet{'b', 'c', 'd'},
-			t:   TypeVariable('a'),
-		},
-		"baz": &Scheme{
-			tvs: TypeVarSet{'a', 'b', 'c'},
-			t:   neutron,
-		},
-		"qux": &Scheme{
-			tvs: TypeVarSet{'a', 'b'},
-			t:   proton,
-		},
+		"foo": NewScheme(
+			TypeVarSet{'a', 'b', 'c'},
+			TypeVariable('a'),
+		),
+		"bar": NewScheme(
+			TypeVarSet{'b', 'c', 'd'},
+			TypeVariable('a'),
+		),
+		"baz": NewScheme(
+			TypeVarSet{'a', 'b', 'c'},
+			neutron,
+		),
+		"qux": NewScheme(
+			TypeVarSet{'a', 'b'},
+			proton,
+		),
 	}
 	assert.Equal(expected, orig)
 
