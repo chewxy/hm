@@ -21,11 +21,22 @@ var solverTest = []struct {
 		mSubs{'a': proton, 'b': list{proton}}, false,
 	},
 
-	{Constraints{
-		{TypeVariable('a'), TypeVariable('b')},
-		{TypeVariable('a'), proton},
-	},
+	{
+		Constraints{
+			{TypeVariable('a'), TypeVariable('b')},
+			{TypeVariable('a'), proton},
+		},
 		mSubs{'a': proton}, false,
+	},
+
+	{
+		Constraints{
+			{
+				NewRecordType("", TypeVariable('a'), TypeVariable('a'), TypeVariable('b')),
+				NewRecordType("", neutron, neutron, proton),
+			},
+		},
+		mSubs{'a': neutron, 'b': proton}, false,
 	},
 }
 

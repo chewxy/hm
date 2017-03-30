@@ -41,6 +41,10 @@ var unifyTests = []struct {
 		NewFnType(list{TypeVariable('a')}, TypeVariable('a'), list{TypeVariable('a')}),
 		NewFnType(list{proton}, proton, TypeVariable('b')),
 		mSubs{'a': proton, 'b': list{proton}}, false},
+	{"(a, a, b) ~ (proton, proton, neutron)",
+		NewRecordType("", TypeVariable('a'), TypeVariable('a'), TypeVariable('b')),
+		NewRecordType("", proton, proton, neutron),
+		mSubs{'a': proton, 'b': neutron}, false},
 }
 
 func TestUnify(t *testing.T) {

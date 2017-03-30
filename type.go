@@ -1,6 +1,8 @@
 package hm
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Type represents all the possible type constructors.
 type Type interface {
@@ -31,3 +33,82 @@ func (t TypeConst) Types() Types                            { return nil }
 func (t TypeConst) String() string                          { return string(t) }
 func (t TypeConst) Format(s fmt.State, c rune)              { fmt.Fprintf(s, "%s", string(t)) }
 func (t TypeConst) Eq(other Type) bool                      { return other == t }
+
+// Record is a basic record/tuple type. It takes an optional name.
+type Record struct {
+	ts   []Type
+	name string
+}
+
+// NewRecordType creates a new Record Type
+func NewRecordType(name string, ts ...Type) *Record {
+	return &Record{
+		ts:   ts,
+		name: name,
+	}
+}
+
+func (t *Record) Apply(subs Subs) Substitutable {
+	ts := make([]Type, len(t.ts))
+	for i, v := range t.ts {
+		ts[i] = v.Apply(subs).(Type)
+	}
+	return NewRecordType(t.name, ts...)
+}
+
+func (t *Record) FreeTypeVar() TypeVarSet {
+	var tvs TypeVarSet
+	for _, v := range t.ts {
+		tvs = v.FreeTypeVar().Union(tvs)
+	}
+	return tvs
+}
+
+func (t *Record) Name() string {
+	if t.name != "" {
+		return t.name
+	}
+	return t.String()
+}
+
+func (t *Record) Normalize(k, v TypeVarSet) (Type, error) {
+	ts := make([]Type, len(t.ts))
+	var err error
+	for i, tt := range t.ts {
+		if ts[i], err = tt.Normalize(k, v); err != nil {
+			return nil, err
+		}
+	}
+	return NewRecordType(t.name, ts...), nil
+}
+
+func (t *Record) Types() Types { return Types(t.ts) }
+
+func (t *Record) Eq(other Type) bool {
+	if ot, ok := other.(*Record); ok {
+		if len(ot.ts) != len(t.ts) {
+			return false
+		}
+		for i, v := range t.ts {
+			if !v.Eq(ot.ts[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func (t *Record) Format(f fmt.State, c rune) {
+	f.Write([]byte("("))
+	for i, v := range t.ts {
+		if i < len(t.ts)-1 {
+			fmt.Fprintf(f, "%v, ", v)
+		} else {
+			fmt.Fprintf(f, "%v)", v)
+		}
+	}
+
+}
+
+func (t *Record) String() string { return fmt.Sprintf("%v", t) }
