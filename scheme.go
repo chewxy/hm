@@ -2,6 +2,10 @@ package hm
 
 import "fmt"
 
+// Scheme represents a polytype.
+// It basically says this:
+//		∀TypeVariables.Type.
+// What this means is for all TypeVariables enclosed in Type, those TypeVariables can be of any Type.
 type Scheme struct {
 	tvs TypeVarSet
 	t   Type

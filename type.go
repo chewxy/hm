@@ -82,7 +82,11 @@ func (t *Record) Normalize(k, v TypeVarSet) (Type, error) {
 	return NewRecordType(t.name, ts...), nil
 }
 
-func (t *Record) Types() Types { return Types(t.ts) }
+func (t *Record) Types() Types {
+	ts := BorrowTypes(len(t.ts))
+	copy(ts, t.ts)
+	return ts
+}
 
 func (t *Record) Eq(other Type) bool {
 	if ot, ok := other.(*Record); ok {
