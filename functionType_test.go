@@ -75,3 +75,15 @@ var fnApplyTests = []struct {
 	// (a -> b) -> c
 	{NewFnType(NewFnType(TypeVariable('a'), TypeVariable('b')), TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(NewFnType(proton, neutron), proton)},
 }
+
+func TestFunctionType_FlatTypes(t *testing.T) {
+	fnType := NewFnType(TypeVariable('a'), TypeVariable('b'), TypeVariable('c'))
+	ts := fnType.FlatTypes()
+	correct := Types{TypeVariable('a'), TypeVariable('b'), TypeVariable('c')}
+	assert.Equal(t, ts, correct)
+
+	fnType2 := NewFnType(fnType, TypeVariable('d'))
+	correct = append(correct, TypeVariable('d'))
+	ts = fnType2.FlatTypes()
+	assert.Equal(t, ts, correct)
+}

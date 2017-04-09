@@ -81,3 +81,26 @@ func (t *FunctionType) Ret(recursive bool) Type {
 
 	return t.b
 }
+
+// FlatTypes returns the types in FunctionTypes as a flat slice of types. This allows for easier iteration in some applications
+func (t *FunctionType) FlatTypes() Types {
+	retVal := BorrowTypes(8) // start with 8. Can always grow
+	retVal = retVal[:0]
+
+	if a, ok := t.a.(*FunctionType); ok {
+		ft := a.FlatTypes()
+		retVal = append(retVal, ft...)
+		ReturnTypes(ft)
+	} else {
+		retVal = append(retVal, t.a)
+	}
+
+	if b, ok := t.b.(*FunctionType); ok {
+		ft := b.FlatTypes()
+		retVal = append(retVal, ft...)
+		ReturnTypes(ft)
+	} else {
+		retVal = append(retVal, t.b)
+	}
+	return retVal
+}
