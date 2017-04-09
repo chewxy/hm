@@ -87,3 +87,12 @@ func TestFunctionType_FlatTypes(t *testing.T) {
 	ts = fnType2.FlatTypes()
 	assert.Equal(t, ts, correct)
 }
+
+func TestFunctionType_Clone(t *testing.T) {
+	fnType := NewFnType(TypeVariable('a'), TypeVariable('b'), TypeVariable('c'))
+	assert.Equal(t, fnType.Clone(), fnType)
+
+	rec := NewRecordType("", TypeVariable('a'), NewFnType(TypeVariable('a'), TypeVariable('b')), TypeVariable('c'))
+	fnType = NewFnType(rec, rec)
+	assert.Equal(t, fnType.Clone(), fnType)
+}

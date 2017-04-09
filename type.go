@@ -22,7 +22,7 @@ type Substitutable interface {
 	FreeTypeVar() TypeVarSet
 }
 
-// TypeConst are the default implementation of a constant type. Feel free to implement your own
+// TypeConst are the default implementation of a constant type. Feel free to implement your own. TypeConsts should be immutable (so no pointer types plz)
 type TypeConst string
 
 func (t TypeConst) Name() string                            { return string(t) }
@@ -116,3 +116,20 @@ func (t *Record) Format(f fmt.State, c rune) {
 }
 
 func (t *Record) String() string { return fmt.Sprintf("%v", t) }
+
+// Clone implements Cloner
+func (t *Record) Clone() interface{} {
+	retVal := new(Record)
+	ts := BorrowTypes(len(t.ts))
+	for i, tt := range t.ts {
+		if c, ok := tt.(Cloner); ok {
+			ts[i] = c.Clone().(Type)
+		} else {
+			ts[i] = tt
+		}
+	}
+	retVal.ts = ts
+	retVal.name = t.name
+
+	return retVal
+}

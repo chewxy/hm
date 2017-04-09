@@ -2,6 +2,11 @@ package hm
 
 import "github.com/pkg/errors"
 
+// Cloner is any type that can clone
+type Cloner interface {
+	Clone() interface{}
+}
+
 // Fresher keeps track of all the TypeVariables that has been generated so far. It has one method - Fresh(), which is to create a new TypeVariable
 type Fresher interface {
 	Fresh() TypeVariable

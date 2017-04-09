@@ -104,3 +104,21 @@ func (t *FunctionType) FlatTypes() Types {
 	}
 	return retVal
 }
+
+// Clone implements Cloner
+func (t *FunctionType) Clone() interface{} {
+	retVal := new(FunctionType)
+
+	if ac, ok := t.a.(Cloner); ok {
+		retVal.a = ac.Clone().(Type)
+	} else {
+		retVal.a = t.a
+	}
+
+	if bc, ok := t.b.(Cloner); ok {
+		retVal.b = bc.Clone().(Type)
+	} else {
+		retVal.b = t.b
+	}
+	return retVal
+}
