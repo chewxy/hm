@@ -6,7 +6,7 @@ Package hm is a simple Hindley-Milner type inference system in Go. It provides t
 
 This package is go-gettable: `go get -u github.com/chewxy/hm`
 
-There are very few dependencies that this package uses. Therefore there isn't a need for vendoring tools.
+There are very few dependencies that this package uses. Therefore there isn't a need for vendoring tools. However, package hm DOES provide a `Gopkg.toml` and `Gopkg.lock` for any potential users of the [dep](https://github.com/golang/dep) tool.
 
 Here is a listing of the dependencies of `hm`:
 
