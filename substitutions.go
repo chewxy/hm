@@ -14,6 +14,13 @@ type Subs interface {
 	Clone() Subs
 }
 
+func MakeSubs(n int) Subs {
+	if n >= 30 {
+		return make(mSubs)
+	}
+	return newSliceSubs(n)
+}
+
 // A Substitution is a tuple representing the TypeVariable and the replacement Type
 type Substitution struct {
 	Tv TypeVariable

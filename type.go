@@ -7,10 +7,10 @@ import (
 // Type represents all the possible type constructors.
 type Type interface {
 	Substitutable
-	Name() string                                   // Name is the name of the constructor
-	Normalize(TypeVarSet, TypeVarSet) (Type, error) // Normalize normalizes all the type variable names in the type
-	Types() Types                                   // If the type is made up of smaller types, then it will return them
-	Eq(Type) bool                                   // equality operation
+	Name() string                                       // Name is the name of the constructor
+	Normalize(k TypeVarSet, v TypeVarSet) (Type, error) // Normalize normalizes all the type variable names in the type
+	Types() Types                                       // If the type is made up of smaller types, then it will return them
+	Eq(Type) bool                                       // equality operation
 
 	fmt.Formatter
 	fmt.Stringer
