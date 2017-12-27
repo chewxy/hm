@@ -8,7 +8,7 @@ import (
 )
 
 func TestFunctionTypeBasics(t *testing.T) {
-	fnType := NewFnType(hm.TypeVariable('a'), hm.TypeVariable('a'), hm.TypeVariable('a'))
+	fnType := NewFunction(hm.TypeVariable('a'), hm.TypeVariable('a'), hm.TypeVariable('a'))
 	if fnType.Name() != "→" {
 		t.Errorf("FunctionType should have \"→\" as a name. Got %q instead", fnType.Name())
 	}
@@ -21,7 +21,7 @@ func TestFunctionTypeBasics(t *testing.T) {
 		t.Error("Expected arg of function to be 'a'")
 	}
 
-	if !fnType.Ret(false).Eq(NewFnType(hm.TypeVariable('a'), hm.TypeVariable('a'))) {
+	if !fnType.Ret(false).Eq(NewFunction(hm.TypeVariable('a'), hm.TypeVariable('a'))) {
 		t.Error("Expected ret(false) to be a → a")
 	}
 
@@ -30,7 +30,7 @@ func TestFunctionTypeBasics(t *testing.T) {
 	}
 
 	// a very simple fn
-	fnType = NewFnType(hm.TypeVariable('a'), hm.TypeVariable('a'))
+	fnType = NewFunction(hm.TypeVariable('a'), hm.TypeVariable('a'))
 	if !fnType.Ret(true).Eq(hm.TypeVariable('a')) {
 		t.Error("Expected final return type to be 'a'")
 	}
@@ -41,7 +41,7 @@ func TestFunctionTypeBasics(t *testing.T) {
 	}
 
 	for _, fas := range fnApplyTests {
-		fn := fas.fn.Apply(fas.sub).(*FunctionType)
+		fn := fas.fn.Apply(fas.sub).(*Function)
 		if !fn.Eq(fas.expected) {
 			t.Errorf("Expected %v. Got %v instead", fas.expected, fn)
 		}
@@ -49,51 +49,51 @@ func TestFunctionTypeBasics(t *testing.T) {
 
 	// bad shit
 	f := func() {
-		NewFnType(hm.TypeVariable('a'))
+		NewFunction(hm.TypeVariable('a'))
 	}
 	assert.Panics(t, f)
 }
 
 var fnApplyTests = []struct {
-	fn  *FunctionType
+	fn  *Function
 	sub hm.Subs
 
-	expected *FunctionType
+	expected *Function
 }{
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, proton)},
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, neutron)},
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'c': proton, 'd': neutron}, NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b'))},
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'a': proton, 'c': neutron}, NewFnType(proton, hm.TypeVariable('b'))},
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'c': proton, 'b': neutron}, NewFnType(hm.TypeVariable('a'), neutron)},
-	{NewFnType(electron, proton), mSubs{'a': proton, 'b': neutron}, NewFnType(electron, proton)},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFunction(proton, proton)},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFunction(proton, neutron)},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'c': proton, 'd': neutron}, NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b'))},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'a': proton, 'c': neutron}, NewFunction(proton, hm.TypeVariable('b'))},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'c': proton, 'b': neutron}, NewFunction(hm.TypeVariable('a'), neutron)},
+	{NewFunction(electron, proton), mSubs{'a': proton, 'b': neutron}, NewFunction(electron, proton)},
 
 	// a -> (b -> c)
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, neutron, proton)},
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, proton, neutron)},
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, neutron, hm.TypeVariable('c'))},
-	{NewFnType(hm.TypeVariable('a'), hm.TypeVariable('c'), hm.TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFnType(proton, hm.TypeVariable('c'), neutron)},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFunction(proton, neutron, proton)},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('a'), hm.TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFunction(proton, proton, neutron)},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c')), mSubs{'a': proton, 'b': neutron}, NewFunction(proton, neutron, hm.TypeVariable('c'))},
+	{NewFunction(hm.TypeVariable('a'), hm.TypeVariable('c'), hm.TypeVariable('b')), mSubs{'a': proton, 'b': neutron}, NewFunction(proton, hm.TypeVariable('c'), neutron)},
 
 	// (a -> b) -> c
-	{NewFnType(NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b')), hm.TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFnType(NewFnType(proton, neutron), proton)},
+	{NewFunction(NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), hm.TypeVariable('a')), mSubs{'a': proton, 'b': neutron}, NewFunction(NewFunction(proton, neutron), proton)},
 }
 
 func TestFunctionType_FlatTypes(t *testing.T) {
-	fnType := NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c'))
+	fnType := NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c'))
 	ts := fnType.FlatTypes()
 	correct := hm.Types{hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c')}
 	assert.Equal(t, ts, correct)
 
-	fnType2 := NewFnType(fnType, hm.TypeVariable('d'))
+	fnType2 := NewFunction(fnType, hm.TypeVariable('d'))
 	correct = append(correct, hm.TypeVariable('d'))
 	ts = fnType2.FlatTypes()
 	assert.Equal(t, ts, correct)
 }
 
 func TestFunctionType_Clone(t *testing.T) {
-	fnType := NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c'))
+	fnType := NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c'))
 	assert.Equal(t, fnType.Clone(), fnType)
 
-	rec := NewRecordType("", hm.TypeVariable('a'), NewFnType(hm.TypeVariable('a'), hm.TypeVariable('b')), hm.TypeVariable('c'))
-	fnType = NewFnType(rec, rec)
+	rec := NewRecordType("", hm.TypeVariable('a'), NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), hm.TypeVariable('c'))
+	fnType = NewFunction(rec, rec)
 	assert.Equal(t, fnType.Clone(), fnType)
 }

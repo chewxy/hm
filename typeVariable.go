@@ -34,9 +34,9 @@ func (t TypeVariable) Types() Types   { return nil }
 func (t TypeVariable) String() string { return fmt.Sprintf("%v", t) }
 func (t TypeVariable) Format(s fmt.State, c rune) {
 	if t >= 'a' && t <= 'z' {
-		fmt.Fprintf(s, "%c", t)
+		fmt.Fprintf(s, "%c", rune(t))
 		return
 	}
-	fmt.Fprintf(s, "<%d>", t)
+	fmt.Fprintf(s, "<%d>", rune(t))
 }
 func (t TypeVariable) Eq(other Type) bool { return other == t }

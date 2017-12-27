@@ -3,12 +3,12 @@ package hmtypes
 import "testing"
 
 func TestFnTypePool(t *testing.T) {
-	f := borrowFnType()
-	f.A = NewFnType(proton, electron)
-	f.B = NewFnType(proton, neutron)
+	f := borrowFn()
+	f.A = NewFunction(proton, electron)
+	f.B = NewFunction(proton, neutron)
 
-	ReturnFnType(f)
-	f = borrowFnType()
+	ReturnFn(f)
+	f = borrowFn()
 	if f.A != nil {
 		t.Error("FunctionType not cleaned up: a is not nil")
 	}
