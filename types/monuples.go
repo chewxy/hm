@@ -15,6 +15,15 @@ func (t Slice) FreeTypeVar() hm.TypeVarSet          { return Monuple(t).FreeType
 func (t Slice) Format(s fmt.State, c rune)          { fmt.Fprintf(s, "[]%v", t.T) }
 func (t Slice) String() string                      { return fmt.Sprintf("%v", t) }
 func (t Slice) Types() hm.Types                     { return hm.Types{t.T} }
+
+func (t Slice) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
+	t2, err := Monuple(t).Normalize(k, v)
+	if err != nil {
+		return nil, err
+	}
+	return Slice(t2), nil
+}
+
 func (t Slice) Eq(other hm.Type) bool {
 	if ot, ok := other.(Slice); ok {
 		return ot.T.Eq(t.T)
@@ -31,6 +40,15 @@ func (t Linear) FreeTypeVar() hm.TypeVarSet          { return Monuple(t).FreeTyp
 func (t Linear) Format(s fmt.State, c rune)          { fmt.Fprintf(s, "Linear[%v]", t.T) }
 func (t Linear) String() string                      { return fmt.Sprintf("%v", t) }
 func (t Linear) Types() hm.Types                     { return hm.Types{t.T} }
+
+func (t Linear) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
+	t2, err := Monuple(t).Normalize(k, v)
+	if err != nil {
+		return nil, err
+	}
+	return Linear(t2), nil
+}
+
 func (t Linear) Eq(other hm.Type) bool {
 	if ot, ok := other.(Linear); ok {
 		return ot.T.Eq(t.T)
@@ -47,6 +65,15 @@ func (t Ref) FreeTypeVar() hm.TypeVarSet          { return Monuple(t).FreeTypeVa
 func (t Ref) Format(s fmt.State, c rune)          { fmt.Fprintf(s, "*%v", t.T) }
 func (t Ref) String() string                      { return fmt.Sprintf("%v", t) }
 func (t Ref) Types() hm.Types                     { return hm.Types{t.T} }
+
+func (t Ref) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
+	t2, err := Monuple(t).Normalize(k, v)
+	if err != nil {
+		return nil, err
+	}
+	return Ref(t2), nil
+}
+
 func (t Ref) Eq(other hm.Type) bool {
 	if ot, ok := other.(Ref); ok {
 		return ot.T.Eq(t.T)

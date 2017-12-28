@@ -71,7 +71,7 @@ func (t Monuple) Normalize(k, v hm.TypeVarSet) (Monuple, error) {
 	var t2 hm.Type
 	var err error
 	if t2, err = t.T.Normalize(k, v); err != nil {
-		return nil, err
+		return Monuple{}, err
 	}
 	t.T = t2
 	return t, nil
