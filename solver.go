@@ -27,7 +27,7 @@ func (s *solver) solve(cs Constraints) {
 		sub, s.err = Unify(c.a, c.b)
 		defer ReturnSubs(s.sub)
 
-		s.sub = compose(sub, s.sub)
+		s.sub = Compose(sub, s.sub)
 		cs = cs[1:].Apply(s.sub).(Constraints)
 		s.solve(cs)
 

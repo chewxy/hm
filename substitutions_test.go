@@ -131,7 +131,7 @@ var composeTests = []struct {
 
 func TestCompose(t *testing.T) {
 	for i, cts := range composeTests {
-		subs := compose(cts.a, cts.b)
+		subs := Compose(cts.a, cts.b)
 
 		for _, v := range cts.expected.Iter() {
 			if T, ok := subs.Get(v.Tv); !ok {

@@ -123,7 +123,8 @@ func (s mSubs) Clone() Subs {
 	return retVal
 }
 
-func compose(a, b Subs) (retVal Subs) {
+// Compose composes two substitution lists together.
+func Compose(a, b Subs) (retVal Subs) {
 	if b == nil {
 		return a
 	}

@@ -334,14 +334,14 @@ func Unify(a, b Type) (sub Subs, err error) {
 
 	switch at := a.(type) {
 	case TypeVariable:
-		return bind(at, b)
+		return Bind(at, b)
 	default:
 		if a.Eq(b) {
 			return nil, nil
 		}
 
 		if btv, ok := b.(TypeVariable); ok {
-			return bind(btv, a)
+			return Bind(btv, a)
 		}
 		atypes := a.Types()
 		btypes := b.Types()
@@ -385,7 +385,7 @@ func unifyMany(a, b Types) (sub Subs, err error) {
 		if sub == nil {
 			sub = s2
 		} else {
-			sub2 := compose(sub, s2)
+			sub2 := Compose(sub, s2)
 			defer ReturnSubs(s2)
 			if sub2 != sub {
 				defer ReturnSubs(sub)
@@ -396,11 +396,12 @@ func unifyMany(a, b Types) (sub Subs, err error) {
 	return
 }
 
-func bind(tv TypeVariable, t Type) (sub Subs, err error) {
+// Bind binds a TypeVariable to a Type. It returns a substitution list.
+func Bind(tv TypeVariable, t Type) (sub Subs, err error) {
 	logf("Binding %v to %v", tv, t)
 	switch {
 	// case tv == t:
-	case occurs(tv, t):
+	case Occurs(tv, t):
 		err = errors.Errorf("recursive unification")
 	default:
 		ssub := BorrowSSubs(1)
@@ -411,7 +412,8 @@ func bind(tv TypeVariable, t Type) (sub Subs, err error) {
 	return
 }
 
-func occurs(tv TypeVariable, s Substitutable) bool {
+// Occurs checks if a TypeVariable exists in any Substitutable (type, scheme, map etc).
+func Occurs(tv TypeVariable, s Substitutable) bool {
 	ftv := s.FreeTypeVar()
 	defer ReturnTypeVarSet(ftv)
 
