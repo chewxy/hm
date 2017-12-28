@@ -31,3 +31,14 @@ type Choice Pair
 //
 // TODO: implement hm.Type
 type Super Pair
+
+// Application is the pre-unified type for a function application.
+// In a simple HM system this would not be needed as the type of an
+// application expression would be found during the unification phase of
+// the expression.
+//
+// In advanced systems where unification may be done concurrently, this would
+// be required, as a "thunk" of sorts for the type system.
+//
+// TODO: implement hm.Type
+type Application Pair
