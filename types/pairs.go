@@ -51,6 +51,10 @@ func (t *Choice) Eq(other hm.Type) bool {
 	return false
 }
 
+func (t *Choice) Clone() interface{} { return (*Choice)((*Pair)(t).Clone()) }
+
+func (t *Choice) Pair() *Pair { return (*Pair)(t) }
+
 // Super is the inverse of Choice. It allows for supertyping functions.
 //
 // Supertyping is typically  implemented as a adding an entry to the vtable/mangled table.
@@ -77,6 +81,10 @@ func (t *Super) Eq(other hm.Type) bool {
 	}
 	return false
 }
+
+func (t *Super) Clone() interface{} { return (*Super)((*Pair)(t).Clone()) }
+
+func (t *Super) Pair() *Pair { return (*Pair)(t) }
 
 // Application is the pre-unified type for a function application.
 // In a simple HM system this would not be needed as the type of an
@@ -105,3 +113,7 @@ func (t *Application) Eq(other hm.Type) bool {
 	}
 	return false
 }
+
+func (t *Application) Clone() interface{} { return (*Application)((*Pair)(t).Clone()) }
+
+func (t *Application) Pair() *Pair { return (*Pair)(t) }

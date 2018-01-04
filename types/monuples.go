@@ -31,6 +31,8 @@ func (t Slice) Eq(other hm.Type) bool {
 	return false
 }
 
+func (t Slice) Monuple() Monuple { return Monuple(t) }
+
 // Linear is a linear type (i.e types that can only appear once)
 type Linear Monuple
 
@@ -56,6 +58,8 @@ func (t Linear) Eq(other hm.Type) bool {
 	return false
 }
 
+func (t Linear) Monuple() Monuple { return Monuple(t) }
+
 // Ref is a reference type (think pointers)
 type Ref Monuple
 
@@ -80,3 +84,5 @@ func (t Ref) Eq(other hm.Type) bool {
 	}
 	return false
 }
+
+func (t Ref) Monuple() Monuple { return Monuple(t) }

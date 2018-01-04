@@ -76,3 +76,15 @@ func (t Monuple) Normalize(k, v hm.TypeVarSet) (Monuple, error) {
 	t.T = t2
 	return t, nil
 }
+
+// Pairer is any type that can be represented by a Pair
+type Pairer interface {
+	hm.Type
+	AsPair() *Pair
+}
+
+// Monupler is any type that can be represented by a Monuple
+type Monupler interface {
+	hm.Type
+	AsMonuple() Monuple
+}
