@@ -117,7 +117,7 @@ func (t *Tuple) normalize(k, v hm.TypeVarSet) ([]hm.Type, error) {
 			return nil, err
 		}
 	}
-	return ts
+	return ts, nil
 }
 
 // Field is a name-type pair.
@@ -137,8 +137,8 @@ func NewRecordType(name string, fields ...Field) *Record {
 	ts := make([]hm.Type, len(fields))
 	ns := make([]string, len(fields))
 	for i := range fields {
-		ts[i] = fields[i].Name
-		ns[i] = fields[i].Type
+		ns[i] = fields[i].Name
+		ts[i] = fields[i].Type
 	}
 	return &Record{
 		Tuple: Tuple{
