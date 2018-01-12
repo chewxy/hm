@@ -7,7 +7,7 @@ import (
 )
 
 // Function is a type constructor that builds function types.
-type Function Pair
+type Function hm.Pair
 
 // NewFunction creates a new FunctionType. Functions are by default right associative. This:
 //		NewFunction(a, a, a)
@@ -30,8 +30,8 @@ func NewFunction(ts ...hm.Type) *Function {
 }
 
 func (t *Function) Name() string                       { return "→" }
-func (t *Function) Apply(sub hm.Subs) hm.Substitutable { ((*Pair)(t)).Apply(sub); return t }
-func (t *Function) FreeTypeVar() hm.TypeVarSet         { return ((*Pair)(t)).FreeTypeVar() }
+func (t *Function) Apply(sub hm.Subs) hm.Substitutable { ((*hm.Pair)(t)).Apply(sub); return t }
+func (t *Function) FreeTypeVar() hm.TypeVarSet         { return ((*hm.Pair)(t)).FreeTypeVar() }
 func (t *Function) Format(s fmt.State, c rune)         { fmt.Fprintf(s, "%v → %v", t.A, t.B) }
 func (t *Function) String() string                     { return fmt.Sprintf("%v", t) }
 func (t *Function) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
@@ -47,7 +47,7 @@ func (t *Function) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
 
 	return NewFunction(a, b), nil
 }
-func (t *Function) Types() hm.Types { return ((*Pair)(t)).Types() }
+func (t *Function) Types() hm.Types { return ((*hm.Pair)(t)).Types() }
 
 func (t *Function) Eq(other hm.Type) bool {
 	if ot, ok := other.(*Function); ok {
@@ -99,7 +99,7 @@ func (t *Function) FlatTypes() hm.Types {
 
 // Clone implenents cloner
 func (t *Function) Clone() interface{} {
-	p := (*Pair)(t)
+	p := (*hm.Pair)(t)
 	cloned := p.Clone()
 	return (*Function)(cloned)
 }

@@ -25,17 +25,17 @@ func TestConstraints(t *testing.T) {
 	}
 
 	cs = cs.Apply(sub).(Constraints)
-	if cs[0].a != neutron {
+	if cs[0].A != neutron {
 		t.Error("Expected neutron")
 	}
-	if cs[0].b != proton {
+	if cs[0].B != proton {
 		t.Error("Expected proton")
 	}
 
-	if cs[1].a != TypeVariable('b') {
+	if cs[1].A != TypeVariable('b') {
 		t.Error("There was nothing to substitute b with")
 	}
-	if cs[1].b != proton {
+	if cs[1].B != proton {
 		t.Error("Expected proton")
 	}
 

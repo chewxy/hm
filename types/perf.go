@@ -1,20 +1,13 @@
 package hmtypes
 
 import (
-	"sync"
 	"unsafe"
+
+	"github.com/chewxy/hm"
 )
 
-var pairPool = &sync.Pool{
-	New: func() interface{} { return new(Pair) },
-}
-
-func borrowPair() *Pair {
-	return pairPool.Get().(*Pair)
-}
-
 func borrowFn() *Function {
-	got := pairPool.Get().(*Pair)
+	got := hm.BorrowPair()
 	return (*Function)(unsafe.Pointer(got))
 }
 
@@ -30,6 +23,6 @@ func ReturnFn(fnt *Function) {
 
 	fnt.A = nil
 	fnt.B = nil
-	p := (*Pair)(unsafe.Pointer(fnt))
-	pairPool.Put(p)
+	p := (*hm.Pair)(unsafe.Pointer(fnt))
+	hm.ReturnPair(p)
 }

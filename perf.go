@@ -1,6 +1,8 @@
 package hm
 
-import "sync"
+import (
+	"sync"
+)
 
 const (
 	poolSize = 4
@@ -159,4 +161,20 @@ func ReturnFnType(fnt *FunctionType) {
 	fnt.a = nil
 	fnt.b = nil
 	fnTypePool.Put(fnt)
+}
+
+var pairPool = &sync.Pool{
+	New: func() interface{} { return new(Pair) },
+}
+
+// BorrowPair allows access to this package's pair pool
+func BorrowPair() *Pair {
+	return pairPool.Get().(*Pair)
+}
+
+// ReturnPair allows accesso this package's pair pool
+func ReturnPair(p *Pair) {
+	p.A = nil
+	p.B = nil
+	pairPool.Put(p)
 }

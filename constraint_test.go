@@ -4,8 +4,8 @@ import "testing"
 
 func TestConstraint(t *testing.T) {
 	c := Constraint{
-		a: TypeVariable('a'),
-		b: NewFnType(TypeVariable('b'), TypeVariable('c')),
+		A: TypeVariable('a'),
+		B: NewFnType(TypeVariable('b'), TypeVariable('c')),
 	}
 
 	ftv := c.FreeTypeVar()
@@ -20,11 +20,11 @@ func TestConstraint(t *testing.T) {
 	}
 
 	c = c.Apply(subs).(Constraint)
-	if !c.a.Eq(NewFnType(proton, proton)) {
+	if !c.A.Eq(NewFnType(proton, proton)) {
 		t.Errorf("c.a: %v", c)
 	}
 
-	if !c.b.Eq(NewFnType(proton, neutron)) {
+	if !c.B.Eq(NewFnType(proton, neutron)) {
 		t.Errorf("c.b: %v", c)
 	}
 }

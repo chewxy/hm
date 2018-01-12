@@ -7,17 +7,17 @@ import (
 )
 
 // Slice is the type of a Slice/List
-type Slice Monuple
+type Slice hm.Monuple
 
 func (t Slice) Name() string                        { return "List" }
-func (t Slice) Apply(subs hm.Subs) hm.Substitutable { return Slice(Monuple(t).Apply(subs)) }
-func (t Slice) FreeTypeVar() hm.TypeVarSet          { return Monuple(t).FreeTypeVar() }
+func (t Slice) Apply(subs hm.Subs) hm.Substitutable { return Slice(hm.Monuple(t).Apply(subs)) }
+func (t Slice) FreeTypeVar() hm.TypeVarSet          { return hm.Monuple(t).FreeTypeVar() }
 func (t Slice) Format(s fmt.State, c rune)          { fmt.Fprintf(s, "[]%v", t.T) }
 func (t Slice) String() string                      { return fmt.Sprintf("%v", t) }
 func (t Slice) Types() hm.Types                     { return hm.Types{t.T} }
 
 func (t Slice) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
-	t2, err := Monuple(t).Normalize(k, v)
+	t2, err := hm.Monuple(t).Normalize(k, v)
 	if err != nil {
 		return nil, err
 	}
@@ -31,20 +31,20 @@ func (t Slice) Eq(other hm.Type) bool {
 	return false
 }
 
-func (t Slice) Monuple() Monuple { return Monuple(t) }
+func (t Slice) Monuple() hm.Monuple { return hm.Monuple(t) }
 
 // Linear is a linear type (i.e types that can only appear once)
-type Linear Monuple
+type Linear hm.Monuple
 
 func (t Linear) Name() string                        { return "Linear" }
-func (t Linear) Apply(subs hm.Subs) hm.Substitutable { return Linear(Monuple(t).Apply(subs)) }
-func (t Linear) FreeTypeVar() hm.TypeVarSet          { return Monuple(t).FreeTypeVar() }
+func (t Linear) Apply(subs hm.Subs) hm.Substitutable { return Linear(hm.Monuple(t).Apply(subs)) }
+func (t Linear) FreeTypeVar() hm.TypeVarSet          { return hm.Monuple(t).FreeTypeVar() }
 func (t Linear) Format(s fmt.State, c rune)          { fmt.Fprintf(s, "Linear[%v]", t.T) }
 func (t Linear) String() string                      { return fmt.Sprintf("%v", t) }
 func (t Linear) Types() hm.Types                     { return hm.Types{t.T} }
 
 func (t Linear) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
-	t2, err := Monuple(t).Normalize(k, v)
+	t2, err := hm.Monuple(t).Normalize(k, v)
 	if err != nil {
 		return nil, err
 	}
@@ -58,20 +58,20 @@ func (t Linear) Eq(other hm.Type) bool {
 	return false
 }
 
-func (t Linear) Monuple() Monuple { return Monuple(t) }
+func (t Linear) Monuple() hm.Monuple { return hm.Monuple(t) }
 
 // Ref is a reference type (think pointers)
-type Ref Monuple
+type Ref hm.Monuple
 
 func (t Ref) Name() string                        { return "Ref" }
-func (t Ref) Apply(subs hm.Subs) hm.Substitutable { return Ref(Monuple(t).Apply(subs)) }
-func (t Ref) FreeTypeVar() hm.TypeVarSet          { return Monuple(t).FreeTypeVar() }
+func (t Ref) Apply(subs hm.Subs) hm.Substitutable { return Ref(hm.Monuple(t).Apply(subs)) }
+func (t Ref) FreeTypeVar() hm.TypeVarSet          { return hm.Monuple(t).FreeTypeVar() }
 func (t Ref) Format(s fmt.State, c rune)          { fmt.Fprintf(s, "*%v", t.T) }
 func (t Ref) String() string                      { return fmt.Sprintf("%v", t) }
 func (t Ref) Types() hm.Types                     { return hm.Types{t.T} }
 
 func (t Ref) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
-	t2, err := Monuple(t).Normalize(k, v)
+	t2, err := hm.Monuple(t).Normalize(k, v)
 	if err != nil {
 		return nil, err
 	}
@@ -85,4 +85,4 @@ func (t Ref) Eq(other hm.Type) bool {
 	return false
 }
 
-func (t Ref) Monuple() Monuple { return Monuple(t) }
+func (t Ref) Monuple() hm.Monuple { return hm.Monuple(t) }

@@ -93,7 +93,7 @@ func TestFunctionType_Clone(t *testing.T) {
 	fnType := NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b'), hm.TypeVariable('c'))
 	assert.Equal(t, fnType.Clone(), fnType)
 
-	rec := NewRecordType("", hm.TypeVariable('a'), NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), hm.TypeVariable('c'))
+	rec := NewTupleType("", hm.TypeVariable('a'), NewFunction(hm.TypeVariable('a'), hm.TypeVariable('b')), hm.TypeVariable('c'))
 	fnType = NewFunction(rec, rec)
 	assert.Equal(t, fnType.Clone(), fnType)
 }
