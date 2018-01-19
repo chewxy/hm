@@ -24,7 +24,7 @@ func (s *solver) solve(cs Constraints) {
 	default:
 		var sub Subs
 		c := cs[0]
-		sub, s.err = Unify(c.B, c.A)
+		sub, s.err = Unify(c.A, c.B)
 		defer ReturnSubs(s.sub)
 
 		s.sub = Compose(sub, s.sub)
