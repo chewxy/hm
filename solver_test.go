@@ -38,6 +38,27 @@ var solverTest = []struct {
 		},
 		mSubs{'a': neutron, 'b': proton}, false,
 	},
+
+	// (a -> a) and (b -> c)
+	{
+		Constraints{
+			{
+				NewFnType(TypeVariable('a'), TypeVariable('a')),
+				NewFnType(TypeVariable('b'), TypeVariable('c')),
+			},
+		},
+		mSubs{'b': TypeVariable('a'), 'c': TypeVariable('a')}, false,
+	},
+
+	{
+		Constraints{
+			{
+				NewFnType(TypeVariable('b'), TypeVariable('c')),
+				NewFnType(TypeVariable('a'), TypeVariable('a')),
+			},
+		},
+		mSubs{'b': TypeVariable('c'), 'a': TypeVariable('b')}, false,
+	},
 }
 
 func TestSolver(t *testing.T) {
