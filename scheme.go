@@ -52,6 +52,11 @@ func (s *Scheme) Clone() *Scheme {
 }
 
 func (s *Scheme) Format(state fmt.State, c rune) {
+	if s == nil {
+		state.Write("∀[∅].∅")
+		return
+	}
+
 	state.Write([]byte("∀["))
 	for i, tv := range s.tvs {
 		if i < len(s.tvs)-1 {
