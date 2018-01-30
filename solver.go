@@ -29,6 +29,7 @@ func (s *solver) solve(cs Constraints) {
 
 		s.sub = Compose(sub, s.sub)
 		cs = cs[1:].Apply(s.sub).(Constraints)
+
 		s.solve(cs)
 
 	}

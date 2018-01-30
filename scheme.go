@@ -53,7 +53,7 @@ func (s *Scheme) Clone() *Scheme {
 
 func (s *Scheme) Format(state fmt.State, c rune) {
 	if s == nil {
-		state.Write("∀[∅].∅")
+		state.Write([]byte*"∀[∅].∅")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (s *Scheme) Normalize() (err error) {
 	defer ReturnTypeVarSet(tfv)
 	ord := BorrowTypeVarSet(len(tfv))
 	for i := range tfv {
-		ord[i] = TypeVariable(letters[i])
+		ord[i] = TypeVariable('a' + i)
 	}
 
 	s.t, err = s.t.Normalize(tfv, ord)

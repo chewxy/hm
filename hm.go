@@ -99,7 +99,7 @@ func (infer *inferer) consGen(expr Expression) (err error) {
 
 		tv := infer.Fresh()
 		cs := append(fnCs, bodyCs...)
-		cs = append(cs, Constraint{fnType, NewFnType(bodyType, tv)})
+		cs = append(cs, Constraint{NewFnType(bodyType, tv), fnType})
 
 		infer.t = tv
 		infer.cs = cs
