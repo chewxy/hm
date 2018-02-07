@@ -29,16 +29,11 @@ func NewFunction(ts ...hm.Type) *Function {
 	return retVal
 }
 
-func (t *Function) Name() string { return "→" }
-func (t *Function) Apply(sub hm.Subs) hm.Substitutable {
-	p := (*hm.Pair)(t)
-	retVal := p.Clone()
-	retVal.Apply(sub)
-	return (*Function)(retVal)
-}
-func (t *Function) FreeTypeVar() hm.TypeVarSet { return ((*hm.Pair)(t)).FreeTypeVar() }
-func (t *Function) Format(s fmt.State, c rune) { fmt.Fprintf(s, "%v → %v", t.A, t.B) }
-func (t *Function) String() string             { return fmt.Sprintf("%v", t) }
+func (t *Function) Name() string                       { return "→" }
+func (t *Function) Apply(sub hm.Subs) hm.Substitutable { return (*Function)((*hm.Pair)(t).Apply(sub)) }
+func (t *Function) FreeTypeVar() hm.TypeVarSet         { return ((*hm.Pair)(t)).FreeTypeVar() }
+func (t *Function) Format(s fmt.State, c rune)         { fmt.Fprintf(s, "%v → %v", t.A, t.B) }
+func (t *Function) String() string                     { return fmt.Sprintf("%v", t) }
 func (t *Function) Normalize(k, v hm.TypeVarSet) (hm.Type, error) {
 	var a, b hm.Type
 	var err error

@@ -15,7 +15,14 @@ type Pair struct {
 }
 
 // Apply applies a substitution on both the first and second types of the Pair.
-func (t *Pair) Apply(sub Subs) {
+func (t *Pair) Apply(sub Subs) *Pair {
+	retVal := t.Clone()
+	retVal.UnsafeApply(sub)
+	return retVal
+}
+
+// UnsafeApply is an unsafe application of the substitution.
+func (t *Pair) UnsafeApply(sub Subs) {
 	t.A = t.A.Apply(sub).(Type)
 	t.B = t.B.Apply(sub).(Type)
 }
