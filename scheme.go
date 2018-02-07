@@ -53,7 +53,7 @@ func (s *Scheme) Clone() *Scheme {
 
 func (s *Scheme) Format(state fmt.State, c rune) {
 	if s == nil {
-		state.Write([]byte*"∀[∅].∅")
+		state.Write([]byte("∀[∅].∅"))
 		return
 	}
 
